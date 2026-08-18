@@ -2,7 +2,9 @@
   "name": "cesta-monorepo",
   "private": true,
   "scripts": {
-    "postinstall": "cd server && npm install",
+    "build": "cd website && npm install && npm run build",
+    "build:website": "cd website && npm install && npm run build",
+    "build:server": "cd server && npm install",
     "build": "cd server && npm install",
     "start": "cd server && npm start"
   },
