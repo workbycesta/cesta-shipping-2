@@ -179,6 +179,7 @@ function ShopPage() {
     const fetchFilterOptions = async () => {
       try {
         const res = await fetch('/api/lots/lot_filter_options?lot_type=hybrid')
+        if (!res.ok) return
         const data = await res.json()
         const opts = data?.filter
         if (!opts) return
@@ -201,31 +202,31 @@ function ShopPage() {
 
       const payload = {
         search: {
-          priceRange: [String(priceFrom), String(priceTo)],
-          sortBy: selectedSort.sortBy,
-          text: searchText,
-          selectedSortBy: selectedSort.selectedSortBy,
+          priceRange: [String(priceFrom ?? 0), String(priceTo ?? 12000000)],
+          sortBy: selectedSort?.sortBy || '+end_date',
+          text: searchText || '',
+          selectedSortBy: selectedSort?.selectedSortBy || 'end_date_l_h',
           filterBy: '',
-          location: selectedLocations,
-          condition: selectedConditions,
-          category_id: selectedCategories,
-          sub_categories: selectedSubCategories,
+          location: selectedLocations || [],
+          condition: selectedConditions || [],
+          category_id: selectedCategories || [],
+          sub_categories: selectedSubCategories || [],
           lot_type: 'Hybrid',
-          search: searchText,
-          priceFrom,
-          priceTo,
-          search_text: searchText,
-          page,
+          search: searchText || '',
+          priceFrom: priceFrom ?? 0,
+          priceTo: priceTo ?? 12000000,
+          search_text: searchText || '',
+          page: page || 1,
           perPage: 24,
-          sort_by: selectedSort.sortBy,
+          sort_by: selectedSort?.sortBy || '+end_date',
           ...(orgName && { organization_name: orgName })
         },
-        sort: selectedSort.sortBy,
+        sort: selectedSort?.sortBy || '+end_date',
         lot_type: 'Hybrid',
-        sort_by: selectedSort.sortBy,
+        sort_by: selectedSort?.sortBy || '+end_date',
         page_size: 24,
-        page_number: page,
-        page,
+        page_number: page || 1,
+        page: page || 1,
         per_page: 24,
         ...(orgName && { organization_name: orgName })
       }

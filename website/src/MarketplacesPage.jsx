@@ -13,9 +13,12 @@ export default function MarketplacesPage() {
       try {
         const res = await fetch('/api/organizations/fetch_marketplace')
         if (!res.ok) {
-          throw new Error('Failed to fetch marketplaces')
+          throw new Error(`Failed to fetch marketplaces (${res.status})`)
         }
         const data = await res.json()
+        if (!data || !data.marketplaces) {
+           throw new Error('Invalid response from marketplaces API')
+        }
         setMarketplaces((data.marketplaces || []).filter(Boolean)) // filter out nulls
       } catch (err) {
         setError(err.message)

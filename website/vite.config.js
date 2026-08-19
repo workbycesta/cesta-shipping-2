@@ -17,9 +17,25 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
       },
+      '/api/lots': {
+        target: 'https://www.b4traders.com',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/lot_publishes': {
+        target: 'https://www.b4traders.com',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/organizations': {
+        target: 'https://www.b4traders.com',
+        changeOrigin: true,
+        secure: false,
+      },
       '/api': {
         target: 'https://www.b4traders.com',
         changeOrigin: true,
+        secure: false,
       },
     },
   },

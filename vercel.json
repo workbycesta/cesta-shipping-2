@@ -1,10 +1,26 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "cd website && npm run build",
-  "installCommand": "cd website && npm install",
+  "installCommand": "npm install && cd website && npm install",
   "outputDirectory": "website/dist",
   "framework": "vite",
   "rewrites": [
+    {
+      "source": "/api/lots/:path*",
+      "destination": "https://www.b4traders.com/api/lots/:path*"
+    },
+    {
+      "source": "/api/lot_publishes/:path*",
+      "destination": "https://www.b4traders.com/api/lot_publishes/:path*"
+    },
+    {
+      "source": "/api/organizations/:path*",
+      "destination": "https://www.b4traders.com/api/organizations/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.js"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
