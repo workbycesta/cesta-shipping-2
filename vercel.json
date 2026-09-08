@@ -6,6 +6,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/manifest/:path*",
+      "destination": "/api/index.js"
+    },
+    {
       "source": "/api/lots/:path*",
       "destination": "https://www.b4traders.com/api/lots/:path*"
     },

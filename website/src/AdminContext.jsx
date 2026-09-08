@@ -110,7 +110,9 @@ export function AdminProvider({ children }) {
     const band = rangeHikes.find(
       (r) => numPrice >= Number(r.min) && numPrice < Number(r.max)
     )
-    if (band) percent = Number(band.percent) || 0
+    // Only a band with an explicitly configured percent (> 0) overrides the global hike;
+    // default zero-percent bands must not cancel out the global priceHike.
+    if (band && Number(band.percent) > 0) percent = Number(band.percent)
     // Step 1: add the hike on top of the raw API price (rounding only AFTER this step, never before)
     const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
     // Step 2: round UP to the next ₹1000 multiple for display pricing

@@ -21,6 +21,10 @@ export default defineConfig({
         target: 'http://localhost:5001',
         changeOrigin: true,
       },
+      '/api/manifest': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
       '/api/lots': {
         target: 'https://www.b4traders.com',
         changeOrigin: true,

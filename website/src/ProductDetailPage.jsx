@@ -55,6 +55,7 @@ export default function ProductDetailPage() {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
 
   const [copied, setCopied] = useState(false)
+  const [downloadingManifest, setDownloadingManifest] = useState(false)
 
   // Fetch Live Bid status for this lot
   const fetchLotBids = async () => {
@@ -145,6 +146,63 @@ export default function ProductDetailPage() {
     navigator.clipboard.writeText(window.location.href)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
+  }
+
+  const handleDownloadManifest = async () => {
+    if (downloadingManifest || !lotId) return
+    setDownloadingManifest(true)
+    try {
+      const res = await fetch(`/api/manifest/${lotId}`)
+      if (!res.ok) {
+        throw new Error(`Failed to download manifest (${res.status})`)
+      }
+      const blob = await res.blob()
+      const blobUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = blobUrl
+      link.download = `manifest_${lotSummary?.lot_number || lotId}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(blobUrl)
+      document.body.removeChild(link)
+    } catch (err) {
+      console.error('Error downloading manifest:', err)
+      alert('Failed to download manifest. Please try again.')
+    } finally {
+      setDownloadingManifest(false)
+    }
+  }
+
+  const [emailingManifest, setEmailingManifest] = useState(false)
+
+  const handleEmailManifest = async () => {
+    if (emailingManifest || !lotId) return
+    const defaultEmail = user?.email || ''
+    const inputEmail = window.prompt('Manifest will be sent to your email address : ', defaultEmail)
+    if (inputEmail === null || inputEmail === '') return
+    const clean = inputEmail.trim().toLowerCase()
+    if (!clean || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+      alert('Please enter a valid email address.')
+      return
+    }
+    setEmailingManifest(true)
+    try {
+      const res = await fetch(`/api/manifest/${lotId}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: clean })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || `Failed to email manifest (${res.status})`)
+      }
+      alert(data.message || `Manifest has been sent to ${clean}!`)
+    } catch (err) {
+      console.error('Error emailing manifest:', err)
+      alert(err.message || 'Failed to email manifest. Please try again.')
+    } finally {
+      setEmailingManifest(false)
+    }
   }
 
   const handleBidSubmit = async (e) => {
@@ -524,15 +582,36 @@ export default function ProductDetailPage() {
           <div className="manifest-header-row">
             <h2>ALL PRODUCTS</h2>
             <div className="manifest-actions">
-              <button type="button" className="btn-manifest-action">Email Manifest</button>
+              <button
+                type="button"
+                className="btn-manifest-action"
+                onClick={handleEmailManifest}
+                disabled={emailingManifest}
+              >
+                {emailingManifest ? 'Sending…' : 'Email Manifest'}
+              </button>
 
-              {/* DOWNLOAD MANIFEST WITH COMING SOON BADGE AS REQUESTED */}
-              <div className="download-manifest-wrapper">
-                <button type="button" className="btn-manifest-action disabled-btn" disabled>
-                  Download Manifest
-                </button>
-                <span className="coming-soon-badge">COMING SOON</span>
-              </div>
+              <button
+                type="button"
+                className={`btn-manifest-download ${downloadingManifest ? 'loading' : ''}`}
+                onClick={handleDownloadManifest}
+                disabled={downloadingManifest}
+              >
+                {downloadingManifest ? (
+                  <>
+                    <span className="spinner-sm"></span> Downloading...
+                  </>
+                ) : (
+                  <>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Download Manifest
+                  </>
+                )}
+              </button>
 
               <a
                 className="btn-whatsapp-action"

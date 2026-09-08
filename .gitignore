@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+website/dist/
+
+# Environment files
+.env
+.env.*
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+
+# Screenshots / temp files
+admin-login.png

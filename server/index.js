@@ -2,6 +2,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
+import XLSX from 'xlsx'
 
 dotenv.config()
 
@@ -128,6 +129,23 @@ async function getPriceConfig() {
 async function getPriceHike() {
   const config = await getPriceConfig()
   return config.priceHike
+}
+
+// Calculate hiked price based on global priceHike or matching range band
+function applyPriceHikeToNumber(price, priceHike = 0, rangeHikes = []) {
+  const numPrice = Number(price)
+  if (isNaN(numPrice) || numPrice <= 0) return price
+  let percent = priceHike
+  if (Array.isArray(rangeHikes) && rangeHikes.length > 0) {
+    const band = rangeHikes.find((r) => numPrice >= Number(r.min) && numPrice < Number(r.max))
+    // Only a band with an explicitly configured percent (> 0) overrides the global hike;
+    // default zero-percent bands must not cancel out the global priceHike.
+    if (band && Number(band.percent) > 0) {
+      percent = Number(band.percent)
+    }
+  }
+  const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
+  return Math.round(hiked)
 }
 
 // Validate a rangeHikes array: numbers, sane bounds, non-overlapping ascending bands
@@ -804,6 +822,215 @@ app.get('/api/admin/orders', async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin orders:', err)
     res.status(500).json({ message: 'Failed to fetch admin orders', error: err.message })
+  }
+})
+
+// Build the manifest Excel buffer for a lot with WholeLot Traders price hike applied.
+// Used by both the download endpoint and the email endpoint.
+async function buildManifestExcel(lotId) {
+  // 1. Fetch lot details from b4traders
+  const lotDetailsRes = await fetch(`https://www.b4traders.com/api/lot_publishes/${lotId}/lot_details`, {
+    headers: { 'Accept': 'application/json, text/plain, */*' }
+  })
+
+  if (!lotDetailsRes.ok) {
+    const err = new Error('Failed to fetch lot details from source')
+    err.statusCode = lotDetailsRes.status
+    throw err
+  }
+
+    const lotData = await lotDetailsRes.json()
+    const summary = lotData?.lot_summary || {}
+    const manifestUrl = summary?.manifest_url
+    const lotNumber = summary?.lot_number || lotId
+    const lotName = summary?.lot_name || `Lot ${lotId}`
+
+    // 2. Fetch current price config (global hike & range hikes)
+    const { priceHike, rangeHikes } = await getPriceConfig()
+
+    let excelBuffer = null
+
+    if (manifestUrl) {
+      try {
+        const fileRes = await fetch(manifestUrl)
+        if (fileRes.ok) {
+          const arrayBuffer = await fileRes.arrayBuffer()
+          const workbook = XLSX.read(Buffer.from(arrayBuffer), { type: 'buffer' })
+          const firstSheetName = workbook.SheetNames[0] || 'Manifest'
+          const sheet = workbook.Sheets[firstSheetName]
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 })
+
+          if (rows && rows.length > 0) {
+            const headers = rows[0]
+            const floorPriceIdx = headers.findIndex((h) => {
+              const str = String(h || '').trim().toLowerCase()
+              return str.includes('floor price') || str === 'floor_price'
+            })
+
+            // Hike Floor Price in every row
+            for (let i = 1; i < rows.length; i++) {
+              const row = rows[i]
+              if (!row || row.length === 0) continue
+              if (floorPriceIdx !== -1 && row[floorPriceIdx] !== undefined && row[floorPriceIdx] !== '') {
+                const rawVal = Number(row[floorPriceIdx])
+                if (!isNaN(rawVal)) {
+                  row[floorPriceIdx] = applyPriceHikeToNumber(rawVal, priceHike, rangeHikes)
+                }
+              }
+            }
+
+            const newSheet = XLSX.utils.aoa_to_sheet(rows)
+            // Preserve original column widths so the file looks like the source manifest
+            if (sheet['!cols']) newSheet['!cols'] = sheet['!cols']
+            const newWb = XLSX.utils.book_new()
+            XLSX.utils.book_append_sheet(newWb, newSheet, firstSheetName)
+            excelBuffer = XLSX.write(newWb, { type: 'buffer', bookType: 'xlsx' })
+          }
+        }
+      } catch (fetchErr) {
+        console.warn(`Could not load direct manifest url ${manifestUrl}, falling back to lot inventories:`, fetchErr)
+      }
+    }
+
+    // 3. Fallback: if manifestUrl was not available or failed, build from inventories
+    if (!excelBuffer) {
+      let allProducts = []
+      let page = 1
+      let totalPages = 1
+
+      while (page <= totalPages && page <= 50) {
+        const invRes = await fetch(
+          `https://www.b4traders.com/api/lot_publishes/${lotId}/fetch_lot_inventories?per_page=100&page=${page}`,
+          { headers: { 'Accept': 'application/json' } }
+        )
+        if (!invRes.ok) break
+        const invData = await invRes.json()
+        const prods = invData?.all_products || []
+        allProducts = allProducts.concat(prods)
+        totalPages = invData?.meta?.total_pages || 1
+        page++
+      }
+
+      // Standard Manifest headers matching b4traders
+      const headers = [
+        'Title', 'Lot Name', 'City', 'Tag Number', 'Inventory ID',
+        'Category L1', 'Category L2', 'Category L3', 'Category L4', 'Category L5', 'Category L6',
+        'Item Type', 'Brand', 'Model', 'Sub-Model/ Variant', 'MRP ( in INR )',
+        'Quantity', 'Functional status', 'Packaging status', 'Grade',
+        'Item Description', 'Remarks', 'Floor Price'
+      ]
+
+      const rows = [headers]
+      for (const p of allProducts) {
+        const rawMrp = Number(p.mrp || 0)
+        const rawItemFloorPrice = Number(p.floor_price || 0) || (summary.mrp ? Math.round((rawMrp / summary.mrp) * summary.floor_price) : 0)
+        const hikedFloorPrice = applyPriceHikeToNumber(rawItemFloorPrice, priceHike, rangeHikes)
+
+        rows.push([
+          p.description || p.title || '',
+          lotName,
+          summary.storage_location || '',
+          p.tag_number || '',
+          p.id || '',
+          p.category || '',
+          '', '', '', '', '',
+          p.item_type || '',
+          p.brand || '',
+          p.model || '',
+          p.variant || '',
+          rawMrp,
+          p.quantity || 1,
+          summary.status || 'As-Is-Condition',
+          'As-Is-Condition',
+          summary.grade_name || 'Not Tested',
+          p.description || '',
+          'NA',
+          hikedFloorPrice
+        ])
+      }
+
+      const newSheet = XLSX.utils.aoa_to_sheet(rows)
+      // Give the generated sheet readable column widths
+      newSheet['!cols'] = headers.map((h, i) => ({ wch: i === 0 || i === 20 ? 50 : (i === 1 ? 45 : 14) }))
+      const newWb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(newWb, newSheet, 'Manifest')
+      excelBuffer = XLSX.write(newWb, { type: 'buffer', bookType: 'xlsx' })
+    }
+
+  return { excelBuffer, filename: `manifest_${lotNumber}.xlsx`, lotName }
+}
+
+// Download Manifest with WholeLot Traders Price Hike Applied
+app.get(['/api/manifest/:lotId', '/api/lots/:lotId/manifest'], async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId).trim()
+    if (!lotId) {
+      return res.status(400).json({ message: 'Lot ID is required' })
+    }
+
+    const { excelBuffer, filename } = await buildManifestExcel(lotId)
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    res.setHeader('Content-Length', excelBuffer.length)
+    return res.send(excelBuffer)
+  } catch (err) {
+    console.error('Error generating manifest file:', err)
+    return res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Failed to generate manifest file', error: err.message })
+  }
+})
+
+// Email Manifest — sends the hiked manifest file to the requested email address
+app.post('/api/manifest/:lotId/email', async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId).trim()
+    if (!lotId) {
+      return res.status(400).json({ message: 'Lot ID is required' })
+    }
+
+    const email = String(req.body?.email || '').trim().toLowerCase()
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'A valid email address is required' })
+    }
+
+    const smtpHost = process.env.SMTP_HOST
+    const smtpPort = Number(process.env.SMTP_PORT || 587)
+    const smtpUser = process.env.SMTP_USER
+    const smtpPass = process.env.SMTP_PASS
+    const mailFrom = process.env.MAIL_FROM || smtpUser
+
+    if (!smtpHost || !smtpUser || !smtpPass) {
+      return res.status(503).json({ message: 'Email service is not configured. Please contact support.' })
+    }
+
+    const { excelBuffer, filename, lotName } = await buildManifestExcel(lotId)
+
+    const nodemailer = (await import('nodemailer')).default
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpPort === 465,
+      auth: { user: smtpUser, pass: smtpPass }
+    })
+
+    await transporter.sendMail({
+      from: mailFrom,
+      to: email,
+      subject: `Manifest - ${lotName}`,
+      text: `Hi,\n\nPlease find attached the manifest for "${lotName}".\n\nAll Floor Prices already include the WholeLot Traders markup.\n\nThanks,\nWholeLot Traders`,
+      attachments: [
+        {
+          filename,
+          content: excelBuffer,
+          contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      ]
+    })
+
+    return res.json({ success: true, message: `Manifest has been sent to ${email}` })
+  } catch (err) {
+    console.error('Error emailing manifest file:', err)
+    return res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Failed to email manifest file', error: err.message })
   }
 })
 
