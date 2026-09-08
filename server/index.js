@@ -1,5 +1,6 @@
 import express from 'express'
 import mongoose from 'mongoose'
+import crypto from 'node:crypto'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import XLSX from 'xlsx'
@@ -340,10 +341,13 @@ async function updateTrader(id, updates) {
     try {
       return await TraderModel.findByIdAndUpdate(id, updates, { new: true }).lean()
     } catch (e) {
-      console.error('Trader update error:', e)
+      // Invalid ObjectId format (e.g. legacy in-memory id) -> fall through to memory lookup
+      if (!(e && e.name === 'CastError')) {
+        console.error('Trader update error:', e)
+      }
     }
   }
-  const idx = memoryTraders.findIndex(t => t.id === id)
+  const idx = memoryTraders.findIndex(t => t.id === String(id))
   if (idx !== -1) {
     memoryTraders[idx] = { ...memoryTraders[idx], ...updates }
     return memoryTraders[idx]
@@ -439,7 +443,7 @@ app.post('/api/auth/register', async (req, res) => {
       const created = await TraderModel.create(traderData)
       traderData.id = created._id.toString()
     } else {
-      traderData.id = String(Date.now() + Math.random())
+      traderData.id = crypto.randomUUID()
       memoryTraders.push(traderData)
     }
 
