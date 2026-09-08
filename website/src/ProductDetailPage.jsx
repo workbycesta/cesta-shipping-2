@@ -167,6 +167,12 @@ export default function ProductDetailPage() {
       return
     }
 
+    // Bids must be in multiples of 1000 (1000, 2000, 3000, ...)
+    if (numBid % 1000 !== 0) {
+      setBiddingError('Bid amount must be in multiples of ₹1,000 (e.g. 1000, 2000, 3000)')
+      return
+    }
+
     // Floor price check
     const minRequired = lotSummary?.floor_price ? Number(lotSummary.floor_price) : 0
     if (numBid < minRequired) {
@@ -286,9 +292,12 @@ export default function ProductDetailPage() {
 
           {/* RIGHT: Product Details & Action Box */}
           <div className="pdp-info">
-            <div className="pdp-timer-badge">
-              ⏱ {formatTime(remainingTime)}
-            </div>
+            {/* Countdown only shown/running when 1 hour or less remains (per Bulk4Traders API) */}
+            {remainingTime > 0 && remainingTime <= 3600 && (
+              <div className="pdp-timer-badge">
+                ⏱ {formatTime(remainingTime)}
+              </div>
+            )}
 
             <h1 className="pdp-title">{lotSummary.lot_name}</h1>
 
@@ -340,6 +349,8 @@ export default function ProductDetailPage() {
                   <input
                     id="bid-input"
                     type="number"
+                    step="1000"
+                    min="0"
                     placeholder={`Min. ${formatMoney(Math.max(lotSummary.floor_price || 0, bidStatusInfo.topBidAmount || 0))}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
@@ -348,6 +359,7 @@ export default function ProductDetailPage() {
                     {submittingBid ? 'SUBMITTING...' : 'SUBMIT BID'}
                   </button>
                 </div>
+                <p className="bid-hint">Bids must be in multiples of ₹1,000</p>
 
                 {biddingError && (
                   <div className="pdp-bid-error">{biddingError}</div>

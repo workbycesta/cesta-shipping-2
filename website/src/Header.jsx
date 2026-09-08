@@ -55,9 +55,12 @@ export default function Header() {
             )}
           </div>
         ) : (
-          <button type="button" className="action-btn sign-in" onClick={openSignInModal}>
-            SIGN IN
-          </button>
+          <>
+            <Link to="/signup" className="action-btn sign-in">SIGN UP</Link>
+            <button type="button" className="action-btn sign-in" onClick={openSignInModal}>
+              SIGN IN
+            </button>
+          </>
         )}
 
         <button type="button" className="action-btn language-btn">SELECT LANGUAGE ▼</button>

@@ -12,12 +12,25 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cesta'
 app.use(cors())
 app.use(express.json())
 
-// Seed trader accounts
-const TRADER_ACCOUNTS = [
-  { id: '1', email: 'trader1@gmail.com', password: 'password', name: 'Trader One' },
-  { id: '2', email: 'trader2@gmail.com', password: 'password', name: 'Trader Two' },
-  { id: '3', email: 'trader3@gmail.com', password: 'password', name: 'Trader Three' }
-]
+// MongoDB Schema for Trader accounts (real registrations, admin-approved)
+const traderSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  mobile: { type: String, required: true, trim: true },
+  password: { type: String, required: true }, // plain text by design (internal project)
+  organisationName: { type: String, default: '', trim: true },
+  termsAccepted: { type: Boolean, default: false },
+  mobileVerified: { type: Boolean, default: false },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  otp: { type: String, default: '' },
+  otpExpiresAt: { type: Date, default: null },
+  createdAt: { type: Date, default: Date.now },
+  reviewedAt: { type: Date, default: null }
+})
+
+let TraderModel = null
+// In-memory fallback for traders (used only when MongoDB is unavailable)
+const memoryTraders = []
 
 // MongoDB Schema for Bid
 const bidSchema = new mongoose.Schema({
@@ -36,6 +49,39 @@ const bidSchema = new mongoose.Schema({
 let BidModel = null
 let isMongoConnected = false
 
+// MongoDB Schema for Price Config (global pricing settings shared across all devices)
+const RANGE_STEP = 5000
+const RANGE_MAX = 100000
+
+// Build the default 20 bands: 0-5k, 5k-10k, ... 95k-100k (all 0% hike)
+function buildDefaultRanges() {
+  const ranges = []
+  for (let min = 0; min < RANGE_MAX; min += RANGE_STEP) {
+    ranges.push({ min, max: min + RANGE_STEP, percent: 0 })
+  }
+  return ranges
+}
+
+const priceConfigSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true, default: 'global' },
+  priceHike: { type: Number, default: 0, min: 0, max: 100 },
+  // Range-wise hikes: [{ min, max, percent }] applied by item price band
+  rangeHikes: {
+    type: [{
+      min: { type: Number, required: true, min: 0 },
+      max: { type: Number, required: true, min: 0 },
+      percent: { type: Number, required: true, min: 0, max: 100 }
+    }],
+    default: buildDefaultRanges
+  },
+  updatedAt: { type: Date, default: Date.now }
+})
+
+let PriceConfigModel = null
+
+// In-memory fallback for price config (used when MongoDB is unavailable)
+let memoryPriceConfig = { priceHike: 0, rangeHikes: buildDefaultRanges() }
+
 mongoose.set('strictQuery', false)
 if (MONGODB_URI) {
   mongoose.connect(MONGODB_URI)
@@ -43,11 +89,130 @@ if (MONGODB_URI) {
       console.log('MongoDB connected successfully')
       isMongoConnected = true
       BidModel = mongoose.model('Bid', bidSchema)
+      PriceConfigModel = mongoose.model('PriceConfig', priceConfigSchema)
+      TraderModel = mongoose.model('Trader', traderSchema)
     })
     .catch((err) => {
       console.warn('MongoDB connection notice (using in-memory bid store):', err.message)
     })
 }
+
+// Get the full pricing config (DB first, memory fallback)
+async function getPriceConfig() {
+  if (isMongoConnected && PriceConfigModel) {
+    try {
+      let config = await PriceConfigModel.findOne({ key: 'global' }).lean()
+      if (!config) {
+        // First run: seed the document with the in-memory value
+        config = await PriceConfigModel.create({
+          key: 'global',
+          priceHike: memoryPriceConfig.priceHike,
+          rangeHikes: memoryPriceConfig.rangeHikes
+        }).then((doc) => doc.toObject()).catch(() => null)
+      }
+      if (config) {
+        memoryPriceConfig.priceHike = typeof config.priceHike === 'number' ? config.priceHike : 0
+        memoryPriceConfig.rangeHikes = Array.isArray(config.rangeHikes) && config.rangeHikes.length
+          ? config.rangeHikes
+          : buildDefaultRanges()
+      }
+      return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+    } catch (e) {
+      console.error('Price config DB query error, falling back to memory:', e)
+    }
+  }
+  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+}
+
+// Keep the old helper working (global default hike)
+async function getPriceHike() {
+  const config = await getPriceConfig()
+  return config.priceHike
+}
+
+// Validate a rangeHikes array: numbers, sane bounds, non-overlapping ascending bands
+function sanitizeRangeHikes(ranges) {
+  if (!Array.isArray(ranges) || ranges.length === 0) {
+    throw new Error('rangeHikes must be a non-empty array')
+  }
+  const cleaned = ranges.map((r) => ({
+    min: Number(r.min),
+    max: Number(r.max),
+    percent: Number(r.percent)
+  }))
+  for (const r of cleaned) {
+    if (!Number.isFinite(r.min) || !Number.isFinite(r.max) || !Number.isFinite(r.percent)) {
+      throw new Error('Each range needs numeric min, max and percent')
+    }
+    if (r.min < 0 || r.max <= r.min) {
+      throw new Error('Each range needs 0 <= min < max')
+    }
+    if (r.percent < 0 || r.percent > 100) {
+      throw new Error('Each range percent must be between 0 and 100')
+    }
+  }
+  cleaned.sort((a, b) => a.min - b.min)
+  for (let i = 1; i < cleaned.length; i++) {
+    if (cleaned[i].min < cleaned[i - 1].max) {
+      throw new Error(`Ranges must not overlap: ${JSON.stringify(cleaned[i - 1])} and ${JSON.stringify(cleaned[i])}`)
+    }
+  }
+  return cleaned
+}
+
+// Save the pricing config (DB + memory cache)
+async function savePriceConfig({ priceHike, rangeHikes }) {
+  if (priceHike !== undefined) {
+    const num = Number(priceHike)
+    if (isNaN(num) || num < 0 || num > 100) {
+      throw new Error('priceHike must be a number between 0 and 100')
+    }
+    memoryPriceConfig.priceHike = num
+  }
+  if (rangeHikes !== undefined) {
+    memoryPriceConfig.rangeHikes = sanitizeRangeHikes(rangeHikes)
+  }
+  if (isMongoConnected && PriceConfigModel) {
+    try {
+      await PriceConfigModel.findOneAndUpdate(
+        { key: 'global' },
+        {
+          key: 'global',
+          priceHike: memoryPriceConfig.priceHike,
+          rangeHikes: memoryPriceConfig.rangeHikes,
+          updatedAt: new Date()
+        },
+        { upsert: true, new: true }
+      )
+    } catch (e) {
+      console.error('Price config DB save error (memory value kept):', e)
+    }
+  }
+  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+}
+
+// Public endpoint: every device reads the same pricing config from here
+app.get('/api/price-config', async (req, res) => {
+  try {
+    const config = await getPriceConfig()
+    res.json({ success: true, ...config })
+  } catch (err) {
+    console.error('Error fetching price config:', err)
+    res.status(500).json({ message: 'Failed to fetch price config', error: err.message })
+  }
+})
+
+// Admin endpoint: update the global pricing config (default hike and/or range hikes)
+app.post('/api/admin/price-config', async (req, res) => {
+  try {
+    const { priceHike, rangeHikes } = req.body
+    const saved = await savePriceConfig({ priceHike, rangeHikes })
+    res.json({ success: true, ...saved })
+  } catch (err) {
+    console.error('Error saving price config:', err)
+    res.status(400).json({ message: err.message || 'Failed to save price config' })
+  }
+})
 
 // In-memory bid store fallback & synchronous cache
 const memoryBids = []
@@ -123,43 +288,293 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', mongoConnected: isMongoConnected })
 })
 
-// Authentication Route
-app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body || {}
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required' })
+// ---------- Trader account helpers ----------
+function traderPublic(t) {
+  return {
+    id: t._id ? t._id.toString() : t.id,
+    name: t.name,
+    email: t.email,
+    mobile: t.mobile,
+    password: t.password,
+    organisationName: t.organisationName || '',
+    termsAccepted: !!t.termsAccepted,
+    mobileVerified: !!t.mobileVerified,
+    status: t.status,
+    createdAt: t.createdAt,
+    reviewedAt: t.reviewedAt
   }
+}
 
-  const cleanEmail = email.toLowerCase().trim()
-  const account = TRADER_ACCOUNTS.find(
-    acc => acc.email.toLowerCase() === cleanEmail && acc.password === password
-  )
+async function findTraderByEmail(email) {
+  const cleanEmail = String(email || '').toLowerCase().trim()
+  if (isMongoConnected && TraderModel) {
+    try {
+      return await TraderModel.findOne({ email: cleanEmail }).lean()
+    } catch (e) {
+      console.error('Trader lookup error:', e)
+    }
+  }
+  return memoryTraders.find(t => t.email === cleanEmail) || null
+}
 
-  if (account) {
+async function updateTrader(id, updates) {
+  if (isMongoConnected && TraderModel) {
+    try {
+      return await TraderModel.findByIdAndUpdate(id, updates, { new: true }).lean()
+    } catch (e) {
+      console.error('Trader update error:', e)
+    }
+  }
+  const idx = memoryTraders.findIndex(t => t.id === id)
+  if (idx !== -1) {
+    memoryTraders[idx] = { ...memoryTraders[idx], ...updates }
+    return memoryTraders[idx]
+  }
+  return null
+}
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000))
+}
+
+function maskMobile(mobile) {
+  const m = String(mobile || '')
+  return m.length === 10 ? `${m.slice(0, 2)}XXXXX${m.slice(7)}` : m
+}
+
+// Buyer Registration (mirrors b4traders signUp form)
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { name, email, mobile, password, organisationName, termsAccepted } = req.body || {}
+
+    // Same mandatory fields as b4traders: Name*, Mobile Number*, Password*, Terms acceptance
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ message: 'Name is required' })
+    }
+    if (!mobile || !/^\d{10}$/.test(String(mobile).trim())) {
+      return res.status(400).json({ message: 'A valid 10 digit mobile number is required' })
+    }
+    if (!password || String(password).length < 8) {
+      return res.status(400).json({ message: 'Password must be minimum 8 characters' })
+    }
+    if (!termsAccepted) {
+      return res.status(400).json({ message: 'You must accept the Terms and Conditions' })
+    }
+
+    const cleanEmail = String(email || '').toLowerCase().trim()
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ message: 'A valid email is required' })
+    }
+
+    const existing = await findTraderByEmail(cleanEmail)
+    const otp = generateOtp()
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
+
+    if (existing) {
+      if (existing.mobileVerified && existing.status !== 'rejected') {
+        return res.status(409).json({ message: 'An account with this email already exists' })
+      }
+      // Unverified (or previously rejected) signup: allow re-registration with fresh OTP
+      const updates = {
+        name: String(name).trim(),
+        mobile: String(mobile).trim(),
+        password: String(password),
+        organisationName: String(organisationName || '').trim(),
+        termsAccepted: true,
+        status: 'pending',
+        otp,
+        otpExpiresAt: otpExpiry,
+        createdAt: new Date(),
+        reviewedAt: null
+      }
+      if (isMongoConnected && TraderModel) {
+        await TraderModel.findByIdAndUpdate(existing._id, updates)
+      } else {
+        const idx = memoryTraders.findIndex(t => t.email === cleanEmail)
+        memoryTraders[idx] = { ...existing, ...updates }
+      }
+      console.log(`[OTP] for ${cleanEmail} (${maskMobile(mobile)}): ${otp}`)
+      return res.json({
+        success: true,
+        message: 'OTP sent to your mobile number. Please verify to complete registration.',
+        devOtp: otp, // internal project: OTP surfaced for testing (no real SMS gateway)
+        mobile: maskMobile(mobile)
+      })
+    }
+
+    const traderData = {
+      name: String(name).trim(),
+      email: cleanEmail,
+      mobile: String(mobile).trim(),
+      password: String(password),
+      organisationName: String(organisationName || '').trim(),
+      termsAccepted: true,
+      mobileVerified: false,
+      status: 'pending',
+      otp,
+      otpExpiresAt: otpExpiry,
+      createdAt: new Date(),
+      reviewedAt: null
+    }
+
+    if (isMongoConnected && TraderModel) {
+      const created = await TraderModel.create(traderData)
+      traderData.id = created._id.toString()
+    } else {
+      traderData.id = String(Date.now() + Math.random())
+      memoryTraders.push(traderData)
+    }
+
+    console.log(`[OTP] for ${cleanEmail} (${maskMobile(mobile)}): ${otp}`)
+    res.json({
+      success: true,
+      message: 'OTP sent to your mobile number. Please verify to complete registration.',
+      devOtp: otp, // internal project: OTP surfaced for testing (no real SMS gateway)
+      mobile: maskMobile(mobile)
+    })
+  } catch (err) {
+    console.error('Registration error:', err)
+    if (err && err.code === 11000) {
+      return res.status(409).json({ message: 'An account with this email already exists' })
+    }
+    res.status(500).json({ message: 'Registration failed', error: err.message })
+  }
+})
+
+// Verify mobile OTP -> registration complete, waiting for admin approval
+app.post('/api/auth/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body || {}
+    const trader = await findTraderByEmail(email)
+    if (!trader) {
+      return res.status(404).json({ message: 'Registration not found. Please sign up first.' })
+    }
+    if (trader.mobileVerified) {
+      return res.json({ success: true, message: 'Mobile already verified.' })
+    }
+    if (!trader.otp || String(otp) !== String(trader.otp)) {
+      return res.status(400).json({ message: 'Invalid OTP. Please try again.' })
+    }
+    if (trader.otpExpiresAt && new Date(trader.otpExpiresAt) < new Date()) {
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' })
+    }
+    await updateTrader(trader._id ? trader._id.toString() : trader.id, {
+      mobileVerified: true,
+      otp: '',
+      otpExpiresAt: null
+    })
+    res.json({
+      success: true,
+      message: 'Registration complete! Your account is now awaiting admin approval. You will be able to sign in once approved.'
+    })
+  } catch (err) {
+    console.error('OTP verification error:', err)
+    res.status(500).json({ message: 'OTP verification failed', error: err.message })
+  }
+})
+
+// Resend OTP
+app.post('/api/auth/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body || {}
+    const trader = await findTraderByEmail(email)
+    if (!trader) {
+      return res.status(404).json({ message: 'Registration not found. Please sign up first.' })
+    }
+    if (trader.mobileVerified) {
+      return res.json({ success: true, message: 'Mobile already verified.' })
+    }
+    const otp = generateOtp()
+    await updateTrader(trader._id ? trader._id.toString() : trader.id, {
+      otp,
+      otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    })
+    console.log(`[OTP] resent for ${trader.email}: ${otp}`)
+    res.json({ success: true, message: 'A new OTP has been sent.', devOtp: otp, mobile: maskMobile(trader.mobile) })
+  } catch (err) {
+    console.error('Resend OTP error:', err)
+    res.status(500).json({ message: 'Failed to resend OTP', error: err.message })
+  }
+})
+
+// ---------- Admin: trader account management ----------
+app.get('/api/admin/traders', async (req, res) => {
+  try {
+    let traders = []
+    if (isMongoConnected && TraderModel) {
+      traders = (await TraderModel.find({}).sort({ createdAt: -1 }).lean()).map(traderPublic)
+    } else {
+      traders = [...memoryTraders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(traderPublic)
+    }
+    res.json({
+      success: true,
+      counts: {
+        total: traders.length,
+        pending: traders.filter(t => t.status === 'pending').length,
+        approved: traders.filter(t => t.status === 'approved').length,
+        rejected: traders.filter(t => t.status === 'rejected').length
+      },
+      traders
+    })
+  } catch (err) {
+    console.error('Error fetching traders:', err)
+    res.status(500).json({ message: 'Failed to fetch trader accounts', error: err.message })
+  }
+})
+
+app.post('/api/admin/traders/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body || {}
+    if (!['approved', 'rejected', 'pending'].includes(status)) {
+      return res.status(400).json({ message: 'status must be approved, rejected or pending' })
+    }
+    const updated = await updateTrader(req.params.id, { status, reviewedAt: new Date() })
+    if (!updated) {
+      return res.status(404).json({ message: 'Trader account not found' })
+    }
+    res.json({ success: true, trader: traderPublic(updated) })
+  } catch (err) {
+    console.error('Error updating trader status:', err)
+    res.status(500).json({ message: 'Failed to update trader status', error: err.message })
+  }
+})
+
+// Authentication Route (only admin-approved traders may sign in)
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body || {}
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' })
+    }
+
+    const trader = await findTraderByEmail(email)
+    if (!trader || trader.password !== String(password)) {
+      return res.status(401).json({ message: 'Invalid email or password' })
+    }
+
+    if (!trader.mobileVerified) {
+      return res.status(403).json({ message: 'Please complete mobile verification (OTP) first.', code: 'VERIFY_OTP' })
+    }
+    if (trader.status === 'pending') {
+      return res.status(403).json({ message: 'Your account is awaiting admin approval. Please try again later.', code: 'PENDING' })
+    }
+    if (trader.status === 'rejected') {
+      return res.status(403).json({ message: 'Your account request was rejected by the admin.', code: 'REJECTED' })
+    }
+
     return res.json({
       success: true,
       user: {
-        id: account.id,
-        email: account.email,
-        name: account.name
+        id: trader._id ? trader._id.toString() : trader.id,
+        email: trader.email,
+        name: trader.name,
+        organisationName: trader.organisationName || ''
       }
     })
+  } catch (err) {
+    console.error('Login error:', err)
+    res.status(500).json({ message: 'Login failed', error: err.message })
   }
-
-  // Allow dynamic logins for trader emails if password is 'password'
-  if (cleanEmail.startsWith('trader') && password === 'password') {
-    const formattedName = cleanEmail.split('@')[0]
-    return res.json({
-      success: true,
-      user: {
-        id: String(Date.now()),
-        email: cleanEmail,
-        name: formattedName.charAt(0).toUpperCase() + formattedName.slice(1)
-      }
-    })
-  }
-
-  return res.status(401).json({ message: 'Invalid credentials. Use trader1@gmail.com, trader2@gmail.com or trader3@gmail.com with password "password"' })
 })
 
 // Submit a Bid
@@ -174,6 +589,11 @@ app.post('/api/bids', async (req, res) => {
     const numBid = Number(bidAmount)
     if (isNaN(numBid) || numBid <= 0) {
       return res.status(400).json({ message: 'Bid amount must be a positive number' })
+    }
+
+    // Bids must be in multiples of 1000 (1000, 2000, 3000, ...)
+    if (numBid % 1000 !== 0) {
+      return res.status(400).json({ message: 'Bid amount must be in multiples of ₹1,000' })
     }
 
     const newBid = await saveBid({

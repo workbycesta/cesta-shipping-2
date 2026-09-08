@@ -288,6 +288,13 @@
   border: 1px solid #fecaca;
 }
 
+.bid-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 6px 0 0;
+}
+
+
 .bid-label {
   font-size: 13px;
   font-weight: 600;

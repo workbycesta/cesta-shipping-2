@@ -145,3 +145,151 @@
   font-size: 14px;
   color: #333;
 }
+
+/* Trader Accounts section */
+.trader-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 16px;
+  flex-wrap: wrap;
+}
+
+.trader-tab {
+  padding: 8px 16px;
+  border: 1px solid #c5cdd8;
+  background: #fff;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #333;
+}
+
+.trader-tab.active {
+  background: #0f2c5b;
+  color: #fff;
+  border-color: #0f2c5b;
+}
+
+.trader-tab.refresh {
+  margin-left: auto;
+}
+
+.trader-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.trader-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid #e0e5ec;
+  border-radius: 8px;
+  padding: 14px 18px;
+  background: #fff;
+}
+
+.trader-name {
+  font-weight: 700;
+  color: #0f2c5b;
+  font-size: 15px;
+}
+
+.trader-org {
+  font-weight: 500;
+  color: #5a6b82;
+}
+
+.trader-meta {
+  font-size: 13px;
+  color: #5a6b82;
+  margin-top: 3px;
+}
+
+.trader-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.admin-approve-btn,
+.admin-reject-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+}
+
+.admin-approve-btn {
+  background: #1b7f3b;
+}
+
+.admin-approve-btn:hover:not(:disabled) {
+  background: #14632d;
+}
+
+.admin-reject-btn {
+  background: #c62828;
+}
+
+.admin-reject-btn:hover:not(:disabled) {
+  background: #a02020;
+}
+
+.admin-approve-btn:disabled,
+.admin-reject-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Range-wise price hike grid */
+.range-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px 24px;
+  margin: 18px 0;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid #e0e5ec;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.range-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f2c5b;
+  white-space: nowrap;
+}
+
+.range-row input {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: right;
+}
+
+.range-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.range-status {
+  font-size: 14px;
+  color: #333;
+}

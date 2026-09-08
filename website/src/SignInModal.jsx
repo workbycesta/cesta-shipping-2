@@ -22,59 +22,15 @@ export default function SignInModal() {
     }
   }
 
-  const handleQuickLogin = async (selectedEmail) => {
-    setEmail(selectedEmail)
-    setPassword('password')
-    setError('')
-    setLoading(true)
-    const res = await login(selectedEmail, 'password')
-    setLoading(false)
-    if (!res.success) {
-      setError(res.error)
-    }
-  }
-
   return (
     <div className="modal-overlay" onClick={closeSignInModal}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close-btn" type="button" onClick={closeSignInModal}>×</button>
-        
+
         <h2>Sign In to WholeLot Traders</h2>
         <p className="modal-subtitle">Participate in live auction bidding across all marketplaces</p>
 
         {error && <div className="modal-error">{error}</div>}
-
-        <div className="quick-accounts-section">
-          <label className="quick-label">Select Demo Trader Account:</label>
-          <div className="quick-buttons-row">
-            <button
-              type="button"
-              className="btn-quick-trader"
-              onClick={() => handleQuickLogin('trader1@gmail.com')}
-            >
-              👤 Trader 1
-              <span className="email-sub">trader1@gmail.com</span>
-            </button>
-            <button
-              type="button"
-              className="btn-quick-trader"
-              onClick={() => handleQuickLogin('trader2@gmail.com')}
-            >
-              👤 Trader 2
-              <span className="email-sub">trader2@gmail.com</span>
-            </button>
-            <button
-              type="button"
-              className="btn-quick-trader"
-              onClick={() => handleQuickLogin('trader3@gmail.com')}
-            >
-              👤 Trader 3
-              <span className="email-sub">trader3@gmail.com</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="divider"><span>OR SIGN IN MANUALLY</span></div>
 
         <form onSubmit={handleSubmit} className="sign-in-form">
           <div className="form-group">
@@ -82,7 +38,7 @@ export default function SignInModal() {
             <input
               id="modal-email"
               type="email"
-              placeholder="e.g. trader1@gmail.com"
+              placeholder="Enter your registered email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -105,6 +61,10 @@ export default function SignInModal() {
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
+
+        <p className="modal-signup-hint">
+          New to WholeLot Traders? <a href="/signup">Create a buyer account</a>
+        </p>
       </div>
     </div>
   )

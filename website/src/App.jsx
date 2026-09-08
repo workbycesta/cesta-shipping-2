@@ -7,6 +7,7 @@ import MarketplacesPage from './MarketplacesPage'
 import ProductDetailPage from './ProductDetailPage'
 import MyAccountPage from './MyAccountPage'
 import AdminOrdersDashboard from './AdminOrdersDashboard'
+import SignUpPage from './SignUpPage'
 import { UserProvider } from './UserContext'
 import Header from './Header'
 import SignInModal from './SignInModal'
@@ -98,8 +99,205 @@ function AdminLogin() {
   )
 }
 
+function AdminTradersSection() {
+  const [traders, setTraders] = useState([])
+  const [counts, setCounts] = useState(null)
+  const [tab, setTab] = useState('pending')
+  const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState(null)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/traders')
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load accounts')
+      setTraders(data.traders)
+      setCounts(data.counts)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const setStatus = async (id, status) => {
+    setBusyId(id)
+    try {
+      const res = await fetch(`/api/admin/traders/${id}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update')
+      await load()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const filtered = traders.filter((t) => t.status === tab)
+
+  return (
+    <div className="admin-section">
+      <h2>Trader Accounts</h2>
+      <p className="admin-desc">
+        Buyer registrations from the website. Approve or reject each account — only approved
+        traders can sign in and bid.
+      </p>
+
+      <div className="trader-tabs">
+        {['pending', 'approved', 'rejected'].map((t) => (
+          <button
+            key={t}
+            type="button"
+            className={`trader-tab ${tab === t ? 'active' : ''}`}
+            onClick={() => setTab(t)}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {counts ? ` (${counts[t]})` : ''}
+          </button>
+        ))}
+        <button type="button" className="trader-tab refresh" onClick={load}>⟳ Refresh</button>
+      </div>
+
+      {error && <div className="admin-error">{error}</div>}
+      {loading ? (
+        <div className="admin-desc">Loading accounts…</div>
+      ) : filtered.length === 0 ? (
+        <div className="admin-desc">No {tab} accounts.</div>
+      ) : (
+        <div className="trader-list">
+          {filtered.map((t) => (
+            <div key={t.id} className="trader-card">
+              <div className="trader-info">
+                <div className="trader-name">
+                  {t.name}
+                  {t.organisationName ? <span className="trader-org"> — {t.organisationName}</span> : null}
+                </div>
+                <div className="trader-meta">✉ {t.email}</div>
+                <div className="trader-meta">📞 {t.mobile} {t.mobileVerified ? '✅ verified' : '⏳ unverified'}</div>
+                <div className="trader-meta">🗓 Registered: {new Date(t.createdAt).toLocaleString()}</div>
+              </div>
+              <div className="trader-actions">
+                {t.status !== 'approved' && (
+                  <button
+                    type="button"
+                    className="admin-approve-btn"
+                    disabled={busyId === t.id}
+                    onClick={() => setStatus(t.id, 'approved')}
+                  >
+                    ✓ Approve
+                  </button>
+                )}
+                {t.status !== 'rejected' && (
+                  <button
+                    type="button"
+                    className="admin-reject-btn"
+                    disabled={busyId === t.id}
+                    onClick={() => setStatus(t.id, 'rejected')}
+                  >
+                    ✕ Reject
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function RangePriceSection() {
+  const { priceHike, updatePriceHike, rangeHikes, updateRangeHikes } = useAdmin()
+  const [draft, setDraft] = useState([])
+  const [status, setStatus] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  // Sync the local editor whenever the server config loads/changes
+  useEffect(() => {
+    setDraft(rangeHikes.map((r) => ({ ...r, percent: String(r.percent ?? 0) })))
+  }, [rangeHikes])
+
+  const setPercent = (idx, value) => {
+    setDraft((prev) => prev.map((r, i) => (i === idx ? { ...r, percent: value } : r)))
+  }
+
+  const save = async () => {
+    setSaving(true)
+    setStatus('')
+    const result = await updateRangeHikes(draft)
+    setSaving(false)
+    setStatus(result.ok ? '✅ Range hikes saved and live on the website.' : `❌ ${result.message}`)
+  }
+
+  const formatINR = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+
+  return (
+    <div className="admin-section">
+      <h2>Price Config</h2>
+      <p className="admin-desc">
+        Set price hikes applied to prices received from the Bulk4Traders API. Each range uses
+        its own percentage — a range applies when the item's base price falls within it.
+      </p>
+
+      <div className="admin-field">
+        <label htmlFor="price-hike">Default Hike (items above the last range)</label>
+        <input
+          id="price-hike"
+          type="number"
+          min="0"
+          max="100"
+          value={priceHike}
+          onChange={(e) => updatePriceHike(e.target.value)}
+        />
+        <span className="admin-unit">%</span>
+      </div>
+
+      <div className="range-grid">
+        {draft.map((r, idx) => (
+          <div key={`${r.min}-${r.max}`} className="range-row">
+            <span className="range-label">{formatINR(r.min)} – {formatINR(r.max)}</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={r.percent}
+              onChange={(e) => setPercent(idx, e.target.value)}
+            />
+            <span className="admin-unit">%</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="range-actions">
+        <button
+          type="button"
+          className="admin-login-btn"
+          style={{ marginTop: 0 }}
+          disabled={saving}
+          onClick={save}
+        >
+          {saving ? 'Saving…' : 'Save Range Hikes'}
+        </button>
+        {status && <span className="range-status">{status}</span>}
+      </div>
+    </div>
+  )
+}
+
 function AdminPanel() {
-  const { priceHike, updatePriceHike, logout } = useAdmin()
+  const { logout } = useAdmin()
   const navigate = useNavigate()
 
   return (
@@ -118,28 +316,9 @@ function AdminPanel() {
           <button className="admin-logout-btn" onClick={() => { logout(); navigate('/'); }}>Logout</button>
         </div>
       </div>
-      <div className="admin-section">
-        <h2>Price Config</h2>
-        <p className="admin-desc">
-          Set a percentage hike to apply to all prices received from the Bulk4Traders API.
-          This will be applied everywhere on the website.
-        </p>
-        <div className="admin-field">
-          <label htmlFor="price-hike">Price Hike Percentage</label>
-          <input
-            id="price-hike"
-            type="number"
-            min="0"
-            max="100"
-            value={priceHike}
-            onChange={(e) => updatePriceHike(e.target.value)}
-          />
-          <span className="admin-unit">%</span>
-        </div>
-        <div className="admin-preview">
-          Current hike: <strong>{priceHike}%</strong>
-        </div>
-      </div>
+      <RangePriceSection />
+
+      <AdminTradersSection />
     </div>
   )
 }
@@ -489,7 +668,12 @@ function ShopPage() {
                 >
                   <img src={product.org_image_url} alt="org_image_url" className="org-logo" />
 
-                  <div className="timer">⏱ {formatTime(product.bid_remaining_time)}</div>
+                  {/* Countdown only runs once the lot is 1 hour or less from ending */}
+                  {typeof product.bid_remaining_time === 'number' &&
+                    product.bid_remaining_time > 0 &&
+                    product.bid_remaining_time <= 3600 && (
+                      <div className="timer">⏱ {formatTime(product.bid_remaining_time)}</div>
+                    )}
 
                   <img
                     src={product.lot_image_urls?.[0] || ''}
@@ -595,6 +779,7 @@ export default function App() {
           <SignInModal />
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
             <Route path="/products" element={<ShopPage />} />
             <Route path="/marketplaces" element={<MarketplacesPage />} />
             <Route path="/my-account" element={<MyAccountPage />} />

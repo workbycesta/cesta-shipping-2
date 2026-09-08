@@ -8,6 +8,8 @@ import './MyAccountPage.css'
 function LotTimer({ endDate }) {
   const [timeLeft, setTimeLeft] = useState('')
   const [isExpired, setIsExpired] = useState(false)
+  // Countdown only displayed when the lot is 1 hour or less from ending
+  const [withinLastHour, setWithinLastHour] = useState(false)
 
   useEffect(() => {
     if (!endDate) {
@@ -24,10 +26,12 @@ function LotTimer({ endDate }) {
       if (isNaN(targetTime) || diff <= 0) {
         setTimeLeft('0 Hr 00 Min 00 Sec')
         setIsExpired(true)
+        setWithinLastHour(true)
         return
       }
 
       setIsExpired(false)
+      setWithinLastHour(diff <= 3600)
       const h = Math.floor(diff / 3600)
       const m = Math.floor((diff % 3600) / 60)
       const s = Math.floor(diff % 60)
@@ -40,6 +44,9 @@ function LotTimer({ endDate }) {
     const timer = setInterval(updateTimer, 1000)
     return () => clearInterval(timer)
   }, [endDate])
+
+  // More than 1 hour left: no countdown shown
+  if (!withinLastHour) return null
 
   return (
     <div className={`lot-timer-badge ${isExpired ? 'expired' : 'active'}`}>
