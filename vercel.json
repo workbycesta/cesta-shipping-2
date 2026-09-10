@@ -7,7 +7,31 @@
   "rewrites": [
     {
       "source": "/api/manifest/:path*",
-      "destination": "/api/index.js"
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/manifest/:path*"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/auth/:path*"
+    },
+    {
+      "source": "/api/bids/:path*",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/bids/:path*"
+    },
+    {
+      "source": "/api/bids",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/bids"
+    },
+    {
+      "source": "/api/admin/:path*",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/admin/:path*"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/admin"
+    },
+    {
+      "source": "/api/price-config",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/price-config"
     },
     {
       "source": "/api/lots/:path*",
@@ -20,10 +44,6 @@
     {
       "source": "/api/organizations/:path*",
       "destination": "https://www.b4traders.com/api/organizations/:path*"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/index.js"
     },
     {
       "source": "/(.*)",
