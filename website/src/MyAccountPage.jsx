@@ -196,11 +196,11 @@ export default function MyAccountPage() {
                     <div className="bid-amounts-row">
                       <div className="amount-block">
                         <span className="amount-label">Your Highest Bid</span>
-                        <strong className="amount-val user-val">{formatMoney(bid.userHighestBid)}</strong>
+                        <strong className="amount-val user-val">{formatRawMoney(bid.userHighestBid)}</strong>
                       </div>
                       <div className="amount-block">
                         <span className="amount-label">Current Top Bid</span>
-                        <strong className="amount-val top-val">{formatMoney(bid.topBidAmount)}</strong>
+                        <strong className="amount-val top-val">{formatRawMoney(bid.topBidAmount)}</strong>
                       </div>
                     </div>
 

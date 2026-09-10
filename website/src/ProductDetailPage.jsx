@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { usePrice } from './usePrice'
 import { useUser } from './UserContext'
+import { displayCity } from './displayCity'
 import Header from './Header'
 import './ProductDetailPage.css'
+
+const TIMER_OFFSET_SECONDS = 60 * 60
 
 function formatTime(seconds) {
   if (!seconds || seconds <= 0) return '0 Hr 00 Min 00 Sec'
@@ -95,7 +98,7 @@ export default function ProductDetailPage() {
         setTopBrand(data?.top_Brand || [])
 
         if (summary && typeof summary.bid_remaining_time === 'number') {
-          setRemainingTime(Math.floor(summary.bid_remaining_time))
+          setRemainingTime(Math.max(0, Math.floor(summary.bid_remaining_time - TIMER_OFFSET_SECONDS)))
         }
       } catch (err) {
         console.error('Error fetching lot details:', err)
@@ -353,8 +356,8 @@ export default function ProductDetailPage() {
 
           {/* RIGHT: Product Details & Action Box */}
           <div className="pdp-info">
-            {/* Countdown only shown/running when 1 hour or less remains (per Bulk4Traders API) */}
-            {remainingTime > 0 && remainingTime <= 3600 && (
+            {/* Display the upstream countdown one hour earlier for each active lot. */}
+            {remainingTime > 0 && (
               <div className="pdp-timer-badge">
                 ⏱ {formatTime(remainingTime)}
               </div>
@@ -363,7 +366,7 @@ export default function ProductDetailPage() {
             <h1 className="pdp-title">{lotSummary.lot_name}</h1>
 
             <div className="pdp-meta-tags">
-              <span className="tag-location">📍 {lotSummary.storage_location}</span>
+              <span className="tag-location">📍 {displayCity(lotSummary.storage_location)}</span>
               <span className="tag-grade">{lotSummary.grade_name}</span>
             </div>
 
@@ -387,16 +390,16 @@ export default function ProductDetailPage() {
               {bidStatusInfo.topBidAmount > 0 && (
                 <div className="pdp-topbid-banner">
                   <span>Current Highest Bid:</span>
-                  <strong>{formatMoney(bidStatusInfo.topBidAmount)}</strong>
+                  <strong>{formatRawMoney(bidStatusInfo.topBidAmount)}</strong>
                 </div>
               )}
 
               {user && bidStatusInfo.userStatus !== 'None' && (
                 <div className={`pdp-user-status-banner ${bidStatusInfo.userStatus === 'Winning' ? 'banner-winning' : 'banner-losing'}`}>
                   {bidStatusInfo.userStatus === 'Winning' ? (
-                    <>🟢 <strong>YOU ARE WINNING!</strong> Your highest bid: {formatMoney(bidStatusInfo.userHighestBid)}</>
+                    <>🟢 <strong>YOU ARE WINNING!</strong> Your highest bid: {formatRawMoney(bidStatusInfo.userHighestBid)}</>
                   ) : (
-                    <>🔴 <strong>YOU ARE OUTBID / LOSING!</strong> Your bid: {formatMoney(bidStatusInfo.userHighestBid)} (Top bid: {formatMoney(bidStatusInfo.topBidAmount)})</>
+                    <>🔴 <strong>YOU ARE OUTBID / LOSING!</strong> Your bid: {formatRawMoney(bidStatusInfo.userHighestBid)} (Top bid: {formatRawMoney(bidStatusInfo.topBidAmount)})</>
                   )}
                 </div>
               )}
@@ -412,7 +415,7 @@ export default function ProductDetailPage() {
                     type="number"
                     step="1000"
                     min="0"
-                    placeholder={`Min. ${formatMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
+                    placeholder={`Min. ${formatRawMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                   />
@@ -431,10 +434,10 @@ export default function ProductDetailPage() {
                 )}
               </form>
 
-              {lotSummary.buy_now_price && (
+              {bidStatusInfo.topBidAmount > 0 && (
                 <div className="pdp-buynow-row">
                   <button type="button" className="btn-buy-now">
-                    Buy @ {formatMoney(lotSummary.buy_now_price)}
+                    Buy @ {formatMoney(bidStatusInfo.topBidAmount)}
                   </button>
                 </div>
               )}

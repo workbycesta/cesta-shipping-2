@@ -148,7 +148,7 @@ export default function AdminOrdersDashboard() {
                       </div>
                       <h4 className="summary-title">{order.lotName}</h4>
                       <div className="summary-price-row">
-                        <span>Top Bid: <strong>{formatMoney(order.currentTopBid)}</strong></span>
+                        <span>Top Bid: <strong>{formatRawMoney(order.currentTopBid)}</strong></span>
                       </div>
                       <div className="summary-winner">
                         🏆 Leader: <span>{order.winningUserEmail}</span>
@@ -182,7 +182,7 @@ export default function AdminOrdersDashboard() {
                     <div className="winning-info">
                       <span className="winning-label">Current Winning Bidder</span>
                       <strong className="winning-email">{selectedOrder.winningUserEmail}</strong>
-                      <span className="winning-amount">High Bid: {formatMoney(selectedOrder.currentTopBid)}</span>
+                      <span className="winning-amount">High Bid: {formatRawMoney(selectedOrder.currentTopBid)}</span>
                     </div>
                   </div>
 
@@ -211,7 +211,7 @@ export default function AdminOrdersDashboard() {
                                 </td>
                                 <td>
                                   <strong className={isWinning ? 'win-amount' : ''}>
-                                    {formatMoney(bidder.bidAmount)}
+                                    {formatRawMoney(bidder.bidAmount)}
                                   </strong>
                                 </td>
                                 <td>{new Date(bidder.timestamp).toLocaleString()}</td>

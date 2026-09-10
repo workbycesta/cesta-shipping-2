@@ -9,6 +9,7 @@ import MyAccountPage from './MyAccountPage'
 import AdminOrdersDashboard from './AdminOrdersDashboard'
 import SignUpPage from './SignUpPage'
 import { UserProvider } from './UserContext'
+import { displayCity } from './displayCity'
 import Header from './Header'
 import SignInModal from './SignInModal'
 import './App.css'
@@ -20,6 +21,8 @@ const SORT_OPTIONS = [
   { label: 'Price : High to Low', sortBy: '-mrp', selectedSortBy: 'mrp_h_l' },
   { label: 'Price : Low to High', sortBy: '+mrp', selectedSortBy: 'mrp_l_h' }
 ]
+
+const TIMER_OFFSET_SECONDS = 60 * 60
 
 function formatTime(seconds) {
   if (!seconds || seconds <= 0) return '0 Hr 00 Min 00 Sec'
@@ -429,7 +432,12 @@ function ShopPage() {
         const now = Date.now()
         const results = (data?.results || []).map((p) => ({
           ...p,
-          endTime: typeof p.bid_remaining_time === 'number' ? now + p.bid_remaining_time * 1000 : null
+          endTime: typeof p.bid_remaining_time === 'number'
+            ? now + Math.max(0, p.bid_remaining_time - TIMER_OFFSET_SECONDS) * 1000
+            : null,
+          bid_remaining_time: typeof p.bid_remaining_time === 'number'
+            ? Math.max(0, p.bid_remaining_time - TIMER_OFFSET_SECONDS)
+            : p.bid_remaining_time
         }))
         setProducts(results)
         setMeta({
@@ -621,7 +629,7 @@ function ShopPage() {
                     setSelectedLocations((prev) => toggleInArray(prev, location))
                   }}
                 />
-                {location}
+                {displayCity(location)}
               </label>
             ))}
           </section>
@@ -672,10 +680,10 @@ function ShopPage() {
                 >
                   <img src={product.org_image_url} alt="org_image_url" className="org-logo" />
 
-                  {/* Countdown only runs once the lot is 1 hour or less from ending */}
+                  {/* Display the upstream countdown one hour earlier for each active lot. */}
                   {typeof product.bid_remaining_time === 'number' &&
                     product.bid_remaining_time > 0 &&
-                    product.bid_remaining_time <= 3600 && (
+                    (
                       <div className="timer">⏱ {formatTime(product.bid_remaining_time)}</div>
                     )}
 
@@ -686,7 +694,7 @@ function ShopPage() {
                   />
 
                   <div className="meta-tags">
-                    <span>📍 {product.storage_location}</span>
+                    <span>📍 {displayCity(product.storage_location)}</span>
                     <span>{product.grade_name}</span>
                   </div>
 
