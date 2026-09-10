@@ -6,23 +6,23 @@ export default defineConfig({
   server: {
     proxy: {
       '/api/auth': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:2000',
         changeOrigin: true,
       },
       '/api/bids': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:2000',
         changeOrigin: true,
       },
       '/api/admin': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:2000',
         changeOrigin: true,
       },
       '/api/price-config': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:2000',
         changeOrigin: true,
       },
       '/api/manifest': {
-        target: 'http://localhost:5001',
+        target: 'http://localhost:2000',
         changeOrigin: true,
       },
       '/api/lots': {
