@@ -18,7 +18,7 @@ function formatTime(seconds) {
 export default function ProductDetailPage() {
   const { id: paramId, orgName } = useParams()
   const navigate = useNavigate()
-  const { formatMoney, formatRawMoney } = usePrice()
+  const { formatMoney, formatRawMoney, applyPriceHike } = usePrice()
   const { user, openSignInModal } = useUser()
 
   // Extract pure ID if slug is included in path
@@ -231,9 +231,12 @@ export default function ProductDetailPage() {
       return
     }
 
-    // Floor price check
-    const minRequired = lotSummary?.floor_price ? Number(lotSummary.floor_price) : 0
-    if (numBid < minRequired) {
+    // Floor price check — uses the HIKED floor price (default/range hike applied),
+    // matching what is displayed and what the backend enforces.
+    const minRequired = lotSummary?.floor_price
+      ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000
+      : 0
+    if (minRequired > 0 && numBid < minRequired) {
       setBiddingError(`Bid amount must be at least the floor price (${formatMoney(minRequired)})`)
       return
     }
@@ -409,7 +412,7 @@ export default function ProductDetailPage() {
                     type="number"
                     step="1000"
                     min="0"
-                    placeholder={`Min. ${formatMoney(Math.max(lotSummary.floor_price || 0, bidStatusInfo.topBidAmount || 0))}`}
+                    placeholder={`Min. ${formatMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                   />

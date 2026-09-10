@@ -53,15 +53,25 @@ let isMongoConnected = false
 
 // MongoDB Schema for Price Config (global pricing settings shared across all devices)
 const RANGE_STEP = 5000
-const RANGE_MAX = 100000
+const RANGE_MIN = 10000
+const RANGE_MAX = 200000
 
-// Build the default 20 bands: 0-5k, 5k-10k, ... 95k-100k (all 0% hike)
+// Build the default contiguous bands: 10000-15000, 15000-20000, ... 195000-200000 (all 0% hike).
+// Prices inside a band use that band's custom percent ONLY when it is explicitly set (> 0);
+// every other price (below 10k, above 2 lakh, or in a 0% band) uses the global default hike.
 function buildDefaultRanges() {
   const ranges = []
-  for (let min = 0; min < RANGE_MAX; min += RANGE_STEP) {
+  for (let min = RANGE_MIN; min < RANGE_MAX; min += RANGE_STEP) {
     ranges.push({ min, max: min + RANGE_STEP, percent: 0 })
   }
   return ranges
+}
+
+// Detect the legacy default config (0-100000 bands, all zero percent) so it can be
+// migrated to the new defaults without losing any custom percent a user saved.
+function isLegacyDefaultRanges(ranges) {
+  if (!Array.isArray(ranges) || ranges.length !== 20) return false
+  return ranges.every((r, i) => Number(r.min) === i * 5000 && Number(r.max) === (i + 1) * 5000 && Number(r.percent) === 0)
 }
 
 const priceConfigSchema = new mongoose.Schema({
@@ -114,9 +124,19 @@ async function getPriceConfig() {
       }
       if (config) {
         memoryPriceConfig.priceHike = typeof config.priceHike === 'number' ? config.priceHike : 0
-        memoryPriceConfig.rangeHikes = Array.isArray(config.rangeHikes) && config.rangeHikes.length
+        let stored = Array.isArray(config.rangeHikes) && config.rangeHikes.length
           ? config.rangeHikes
           : buildDefaultRanges()
+        // One-time migration: legacy default (0-100k bands) -> new default (10k-2L bands)
+        if (isLegacyDefaultRanges(stored)) {
+          stored = buildDefaultRanges()
+          PriceConfigModel.findOneAndUpdate(
+            { key: 'global' },
+            { rangeHikes: stored, updatedAt: new Date() },
+            { upsert: true }
+          ).catch((e) => console.error('Price config migration save error:', e))
+        }
+        memoryPriceConfig.rangeHikes = stored
       }
       return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
     } catch (e) {
@@ -599,6 +619,24 @@ app.post('/api/auth/login', async (req, res) => {
   }
 })
 
+// Fetch the authoritative raw floor price for a lot directly from b4traders,
+// so the enforced minimum never depends on what the client sends.
+async function fetchRawLotFloorPrice(lotId) {
+  try {
+    const lotDetailsRes = await fetch(`https://www.b4traders.com/api/lot_publishes/${lotId}/lot_details`, {
+      headers: { 'Accept': 'application/json, text/plain, */*' }
+    })
+    if (!lotDetailsRes.ok) return null
+    const data = await lotDetailsRes.json()
+    const summary = data?.lot_publishes?.[0] || data?.lot_publishes || data
+    const raw = Number(summary?.floor_price)
+    return Number.isFinite(raw) && raw > 0 ? raw : null
+  } catch (err) {
+    console.error('Error fetching raw lot floor price:', err.message)
+    return null
+  }
+}
+
 // Submit a Bid
 app.post('/api/bids', async (req, res) => {
   try {
@@ -618,12 +656,25 @@ app.post('/api/bids', async (req, res) => {
       return res.status(400).json({ message: 'Bid amount must be in multiples of ₹1,000' })
     }
 
+    // Enforce the HIKED floor price server-side so it is identical on every device:
+    // raw floor price comes from b4traders (client value only as fallback), then the
+    // admin-configured default/range hike is applied before comparing with the bid.
+    const rawFloor = (await fetchRawLotFloorPrice(lotId)) ?? Number(floorPrice || 0)
+    const config = await getPriceConfig()
+    const hikedFloor = applyPriceHikeToNumber(rawFloor, config.priceHike, config.rangeHikes)
+    if (hikedFloor > 0 && numBid < hikedFloor) {
+      return res.status(400).json({
+        message: `Bid amount must be at least the floor price (₹${hikedFloor.toLocaleString('en-IN')})`,
+        minBid: hikedFloor
+      })
+    }
+
     const newBid = await saveBid({
       lotId,
       lotName,
       lotImageUrl,
       bidAmount: numBid,
-      floorPrice,
+      floorPrice: hikedFloor || Number(floorPrice || 0),
       mrp,
       userEmail,
       userName,

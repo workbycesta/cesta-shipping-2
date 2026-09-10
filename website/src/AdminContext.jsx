@@ -58,48 +58,39 @@ export function AdminProvider({ children }) {
     sessionStorage.removeItem('admin_auth')
   }
 
-  // Persist the new hike to the server so ALL devices get the same price
-  const updatePriceHike = async (value) => {
-    const num = sanitizeHike(value)
-    setPriceHike(num) // optimistic update for immediate UI feedback
-    try {
-      const res = await fetch('/api/admin/price-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceHike: num })
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        console.error('Failed to save price config:', data.message || res.statusText)
-        return false
-      }
-      return true
-    } catch (err) {
-      console.error('Failed to save price config:', err)
-      return false
-    }
+  // Set the local default hike value in the editor (NOT saved — admin presses Save)
+  const updatePriceHike = (value) => {
+    setPriceHike(sanitizeHike(value))
   }
 
-  // Persist range-wise hikes; expects the full array [{ min, max, percent }]
-  const updateRangeHikes = async (ranges) => {
+  // Save BOTH the default hike and the range hikes in one request.
+  // Nothing is reflected on the website until this is called.
+  const savePriceConfig = async ({ priceHike: ph, rangeHikes: rh }) => {
+    const body = {}
+    if (ph !== undefined) body.priceHike = sanitizeHike(ph)
+    if (rh !== undefined) body.rangeHikes = rh
     try {
       const res = await fetch('/api/admin/price-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rangeHikes: ranges })
+        body: JSON.stringify(body)
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) {
-        console.error('Failed to save range hikes:', data.message || res.statusText)
-        return { ok: false, message: data.message || 'Failed to save range hikes' }
+        console.error('Failed to save price config:', data.message || res.statusText)
+        return { ok: false, message: data.message || 'Failed to save price config' }
       }
+      if (typeof data.priceHike === 'number') setPriceHike(sanitizeHike(data.priceHike))
       if (Array.isArray(data.rangeHikes)) setRangeHikes(data.rangeHikes)
       return { ok: true }
     } catch (err) {
-      console.error('Failed to save range hikes:', err)
-      return { ok: false, message: 'Failed to save range hikes' }
+      console.error('Failed to save price config:', err)
+      return { ok: false, message: 'Failed to save price config' }
     }
   }
+
+  // Legacy single-field save (kept for compatibility); prefers savePriceConfig
+  const updateRangeHikes = async (ranges) => savePriceConfig({ rangeHikes: ranges })
 
   const applyPriceHike = (price) => {
     const numPrice = Number(price)
@@ -127,6 +118,7 @@ export function AdminProvider({ children }) {
       logout,
       priceHike,
       updatePriceHike,
+      savePriceConfig,
       rangeHikes,
       updateRangeHikes,
       applyPriceHike

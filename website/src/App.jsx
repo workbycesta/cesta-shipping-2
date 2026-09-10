@@ -219,26 +219,29 @@ function AdminTradersSection() {
 }
 
 function RangePriceSection() {
-  const { priceHike, updatePriceHike, rangeHikes, updateRangeHikes } = useAdmin()
+  const { priceHike, updatePriceHike, savePriceConfig, rangeHikes } = useAdmin()
+  const [draftHike, setDraftHike] = useState('0')
   const [draft, setDraft] = useState([])
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Sync the local editor whenever the server config loads/changes
   useEffect(() => {
+    setDraftHike(String(priceHike ?? 0))
     setDraft(rangeHikes.map((r) => ({ ...r, percent: String(r.percent ?? 0) })))
-  }, [rangeHikes])
+  }, [priceHike, rangeHikes])
 
   const setPercent = (idx, value) => {
     setDraft((prev) => prev.map((r, i) => (i === idx ? { ...r, percent: value } : r)))
   }
 
+  // Nothing is applied to the live website until this is pressed.
   const save = async () => {
     setSaving(true)
     setStatus('')
-    const result = await updateRangeHikes(draft)
+    const result = await savePriceConfig({ priceHike: draftHike, rangeHikes: draft })
     setSaving(false)
-    setStatus(result.ok ? '✅ Range hikes saved and live on the website.' : `❌ ${result.message}`)
+    setStatus(result.ok ? '✅ Saved — live on the website for all devices.' : `❌ ${result.message}`)
   }
 
   const formatINR = (n) => `₹${Number(n).toLocaleString('en-IN')}`
@@ -247,19 +250,20 @@ function RangePriceSection() {
     <div className="admin-section">
       <h2>Price Config</h2>
       <p className="admin-desc">
-        Set price hikes applied to prices received from the Bulk4Traders API. Each range uses
-        its own percentage — a range applies when the item's base price falls within it.
+        The Default Hike below applies to ALL prices (including below ₹10,000 and above ₹2,00,000).
+        Each range band overrides the default ONLY when its custom percent is set above 0.
+        Nothing changes on the website until you press Save.
       </p>
 
       <div className="admin-field">
-        <label htmlFor="price-hike">Default Hike (items above the last range)</label>
+        <label htmlFor="price-hike">Default Hike (applies to all prices)</label>
         <input
           id="price-hike"
           type="number"
           min="0"
           max="100"
-          value={priceHike}
-          onChange={(e) => updatePriceHike(e.target.value)}
+          value={draftHike}
+          onChange={(e) => setDraftHike(e.target.value)}
         />
         <span className="admin-unit">%</span>
       </div>
@@ -288,7 +292,7 @@ function RangePriceSection() {
           disabled={saving}
           onClick={save}
         >
-          {saving ? 'Saving…' : 'Save Range Hikes'}
+          {saving ? 'Saving…' : 'Save Price Config'}
         </button>
         {status && <span className="range-status">{status}</span>}
       </div>
