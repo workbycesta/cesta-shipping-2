@@ -23,9 +23,9 @@ export function AdminProvider({ children }) {
   // Price hike is stored ON THE SERVER (DB), not in localStorage,
   // so every device sees the same pricing config.
   const [priceHike, setPriceHike] = useState(0)
-  // Range-wise hikes: [{ min, max, percent }] — percent applied when the
-  // raw item price falls inside [min, max). Prices above the last band
-  // fall back to the global `priceHike`.
+  // Custom admin-defined ranges: [{ min, max, percent }], inclusive on both
+  // ends, never overlapping. A matching range ALWAYS wins (even at 0%);
+  // prices outside all ranges use the global `priceHike`.
   const [rangeHikes, setRangeHikes] = useState([])
   // Timer earliness (hours): product countdowns display
   // (raw remaining time − this). Default 1 = current one-hour-early behaviour.
@@ -43,7 +43,7 @@ export function AdminProvider({ children }) {
         if (data && typeof data.priceHike === 'number') {
           setPriceHike(sanitizeHike(data.priceHike))
         }
-        if (data && Array.isArray(data.rangeHikes) && data.rangeHikes.length) {
+        if (data && Array.isArray(data.rangeHikes)) {
           setRangeHikes(data.rangeHikes)
         }
         if (data && typeof data.timerEarlyHours === 'number') {
@@ -110,15 +110,14 @@ export function AdminProvider({ children }) {
   const applyPriceHike = (price) => {
     const numPrice = Number(price)
     if (isNaN(numPrice) || numPrice <= 0) return price
-    // Pick the band the RAW price falls into: min <= price < max.
-    // Prices beyond the last band (e.g. > 100000) fall back to the global hike.
+    // Pick the custom range the RAW price falls into (inclusive both ends).
+    // A matching range ALWAYS wins (even at 0%); prices outside all ranges
+    // use the global hike.
     let percent = priceHike
     const band = rangeHikes.find(
-      (r) => numPrice >= Number(r.min) && numPrice < Number(r.max)
+      (r) => numPrice >= Number(r.min) && numPrice <= Number(r.max)
     )
-    // Only a band with an explicitly configured percent (> 0) overrides the global hike;
-    // default zero-percent bands must not cancel out the global priceHike.
-    if (band && Number(band.percent) > 0) percent = Number(band.percent)
+    if (band) percent = Number(band.percent)
     // Step 1: add the hike on top of the raw API price (rounding only AFTER this step, never before)
     const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
     // Step 2: round UP to the next ₹1000 multiple for display pricing

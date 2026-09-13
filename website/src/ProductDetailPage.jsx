@@ -235,13 +235,15 @@ export default function ProductDetailPage() {
       return
     }
 
-    // Floor price check — uses the HIKED floor price (default/range hike applied),
-    // matching what is displayed and what the backend enforces.
+    // Minimum bid is one ₹1,000 increment above the HIKED floor price
+    // (default/range hike applied, rounded up to the next ₹1,000 first) —
+    // a bid exactly at the floor price is not enough.
+    // Matches the placeholder and what the backend enforces.
     const minRequired = lotSummary?.floor_price
-      ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000
+      ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000
       : 0
     if (minRequired > 0 && numBid < minRequired) {
-      setBiddingError(`Bid amount must be at least the floor price (${formatMoney(minRequired)})`)
+      setBiddingError(`Minimum bid is ${formatRawMoney(minRequired)} (floor price + ₹1,000)`)
       return
     }
 
@@ -416,7 +418,7 @@ export default function ProductDetailPage() {
                     type="number"
                     step="1000"
                     min="0"
-                    placeholder={`Min. ${formatRawMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
+                    placeholder={`Min. ${formatRawMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                   />

@@ -247,39 +247,71 @@
   cursor: not-allowed;
 }
 
-/* Range-wise price hike grid */
-.range-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px 24px;
-  margin: 18px 0;
-}
-
-.range-row {
+/* Custom price-hike range editor */
+.hike-rows {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  margin: 18px 0 4px;
+}
+
+.hike-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 90px 36px;
   gap: 10px;
-  background: #fff;
-  border: 1px solid #e0e5ec;
-  border-radius: 6px;
-  padding: 8px 12px;
+  align-items: center;
 }
 
-.range-label {
-  flex: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: #0f2c5b;
-  white-space: nowrap;
-}
-
-.range-row input {
-  width: 70px;
-  padding: 6px 8px;
+.hike-row input {
+  padding: 8px 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
-  text-align: right;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.hike-row-head span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5a6b82;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.hike-remove-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #e0a3a3;
+  background: #fff;
+  color: #c00;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.hike-remove-btn:hover {
+  background: #fee;
+}
+
+.hike-add-row {
+  margin: 10px 0 4px;
+}
+
+.hike-add-btn {
+  padding: 8px 16px;
+  border: 1px dashed #2e6dd7;
+  background: #f4f8ff;
+  color: #2e6dd7;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hike-add-btn:hover {
+  background: #e8f0fd;
 }
 
 .range-actions {

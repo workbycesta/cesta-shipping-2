@@ -231,35 +231,92 @@ function RangePriceSection() {
   // Sync the local editor whenever the server config loads/changes
   useEffect(() => {
     setDraftHike(String(priceHike ?? 0))
-    setDraft(rangeHikes.map((r) => ({ ...r, percent: String(r.percent ?? 0) })))
+    setDraft((rangeHikes || []).map((r, i) => ({
+      key: i,
+      min: String(r.min ?? ''),
+      max: String(r.max ?? ''),
+      percent: String(r.percent ?? 0)
+    })))
   }, [priceHike, rangeHikes])
 
-  const setPercent = (idx, value) => {
-    setDraft((prev) => prev.map((r, i) => (i === idx ? { ...r, percent: value } : r)))
+  const nextKey = () => Date.now() + Math.random()
+
+  const setRow = (key, field, value) => {
+    setDraft((prev) => prev.map((r) => (r.key === key ? { ...r, [field]: value } : r)))
+  }
+
+  const addRow = () => {
+    setDraft((prev) => [...prev, { key: nextKey(), min: '', max: '', percent: '0' }])
+  }
+
+  const removeRow = (key) => {
+    setDraft((prev) => prev.filter((r) => r.key !== key))
+  }
+
+  // Validate custom ranges locally before saving: numeric, sane bounds,
+  // and strictly non-overlapping with no shared boundary value.
+  const validateRanges = (rows) => {
+    const cleaned = []
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i]
+      const min = Number(row.min)
+      const max = Number(row.max)
+      const percent = Number(row.percent)
+      const label = `Row ${i + 1}`
+      if (row.min === '' || row.max === '' || row.percent === '' || isNaN(min) || isNaN(max) || isNaN(percent)) {
+        return { ok: false, message: `${label}: fill From, To and Hike % with numbers.` }
+      }
+      if (!Number.isInteger(min) || !Number.isInteger(max)) {
+        return { ok: false, message: `${label}: From/To must be whole rupees.` }
+      }
+      if (min < 0 || max <= min) {
+        return { ok: false, message: `${label}: needs 0 ≤ From < To.` }
+      }
+      if (percent < 0 || percent > 100) {
+        return { ok: false, message: `${label}: Hike % must be between 0 and 100.` }
+      }
+      cleaned.push({ min, max, percent })
+    }
+    cleaned.sort((a, b) => a.min - b.min || a.max - b.max)
+    for (let i = 1; i < cleaned.length; i++) {
+      if (cleaned[i].min <= cleaned[i - 1].max) {
+        return {
+          ok: false,
+          message: `Rows overlap: ₹${cleaned[i - 1].min.toLocaleString('en-IN')}–₹${cleaned[i - 1].max.toLocaleString('en-IN')} and ₹${cleaned[i].min.toLocaleString('en-IN')}–₹${cleaned[i].max.toLocaleString('en-IN')} share ₹${cleaned[i].min.toLocaleString('en-IN')}. Start the next range at ₹${(cleaned[i - 1].max + 1).toLocaleString('en-IN')} or later.`
+        }
+      }
+    }
+    return { ok: true, ranges: cleaned }
   }
 
   // Nothing is applied to the live website until this is pressed.
   const save = async () => {
     setSaving(true)
     setStatus('')
-    const result = await savePriceConfig({ priceHike: draftHike, rangeHikes: draft })
+    const checked = validateRanges(draft)
+    if (!checked.ok) {
+      setSaving(false)
+      setStatus(`❌ ${checked.message}`)
+      return
+    }
+    const result = await savePriceConfig({ priceHike: draftHike, rangeHikes: checked.ranges })
     setSaving(false)
     setStatus(result.ok ? '✅ Saved — live on the website for all devices.' : `❌ ${result.message}`)
   }
 
-  const formatINR = (n) => `₹${Number(n).toLocaleString('en-IN')}`
-
   return (
     <div className="admin-section">
-      <h2>Price Config</h2>
+      <h2>Price Hikes</h2>
       <p className="admin-desc">
-        The Default Hike below applies to ALL prices (including below ₹10,000 and above ₹2,00,000).
-        Each range band overrides the default ONLY when its custom percent is set above 0.
-        Nothing changes on the website until you press Save.
+        The Default Hike below applies to every price OUTSIDE your custom ranges.
+        Add your own From → To ranges below — each range overrides the default with its
+        own hike % (even 0%). Ranges are inclusive on both ends and must not overlap
+        or share a number: if one range ends at ₹15,000, the next must start at
+        ₹15,001 or later. Nothing changes on the website until you press Save.
       </p>
 
       <div className="admin-field">
-        <label htmlFor="price-hike">Default Hike (applies to all prices)</label>
+        <label htmlFor="price-hike">Default Hike (applies outside custom ranges)</label>
         <input
           id="price-hike"
           type="number"
@@ -271,20 +328,63 @@ function RangePriceSection() {
         <span className="admin-unit">%</span>
       </div>
 
-      <div className="range-grid">
+      <div className="hike-rows">
+        <div className="hike-row hike-row-head">
+          <span>From Amount (₹)</span>
+          <span>To Amount (₹)</span>
+          <span>Hike %</span>
+          <span />
+        </div>
         {draft.map((r, idx) => (
-          <div key={`${r.min}-${r.max}`} className="range-row">
-            <span className="range-label">{formatINR(r.min)} – {formatINR(r.max)}</span>
+          <div key={r.key} className="hike-row">
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 10000"
+              aria-label={`Row ${idx + 1} from amount`}
+              value={r.min}
+              onChange={(e) => setRow(r.key, 'min', e.target.value)}
+            />
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 14000"
+              aria-label={`Row ${idx + 1} to amount`}
+              value={r.max}
+              onChange={(e) => setRow(r.key, 'max', e.target.value)}
+            />
             <input
               type="number"
               min="0"
               max="100"
+              placeholder="e.g. 5"
+              aria-label={`Row ${idx + 1} hike percent`}
               value={r.percent}
-              onChange={(e) => setPercent(idx, e.target.value)}
+              onChange={(e) => setRow(r.key, 'percent', e.target.value)}
             />
-            <span className="admin-unit">%</span>
+            <button
+              type="button"
+              className="hike-remove-btn"
+              aria-label={`Remove row ${idx + 1}`}
+              onClick={() => removeRow(r.key)}
+            >
+              ✕
+            </button>
           </div>
         ))}
+        {draft.length === 0 && (
+          <p className="admin-desc" style={{ margin: '8px 0 0' }}>
+            No custom ranges — every price uses the Default Hike above.
+          </p>
+        )}
+      </div>
+
+      <div className="hike-add-row">
+        <button type="button" className="hike-add-btn" onClick={addRow}>
+          + Add Range
+        </button>
       </div>
 
       <div className="range-actions">
