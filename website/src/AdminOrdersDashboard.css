@@ -264,6 +264,26 @@
   overflow: hidden;
 }
 
+.summary-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.summary-title a:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+.detail-header-info h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.detail-header-info h2 a:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
 .summary-price-row {
   font-size: 12px;
   color: #475569;

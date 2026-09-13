@@ -180,7 +180,16 @@ export default function AdminOrdersDashboard() {
                         <span className="summary-lot-id">Lot #{order.lotId}</span>
                         <span className="bids-count-pill">{order.totalBidsCount} Bids</span>
                       </div>
-                      <h4 className="summary-title">{order.lotName}</h4>
+                      <h4 className="summary-title">
+                        <Link
+                          to={`/product_detail/${order.lotId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {order.lotName}
+                        </Link>
+                      </h4>
                       <div className="summary-price-row">
                         <span>Top Bid: <strong>{formatRawMoney(order.currentTopBid)}</strong></span>
                       </div>
@@ -202,7 +211,11 @@ export default function AdminOrdersDashboard() {
                       <img src={selectedOrder.lotImageUrl} alt="lot" className="detail-lot-img" />
                     )}
                     <div className="detail-header-info">
-                      <h2>{selectedOrder.lotName}</h2>
+                      <h2>
+                        <Link to={`/product_detail/${selectedOrder.lotId}`} target="_blank" rel="noreferrer">
+                          {selectedOrder.lotName}
+                        </Link>
+                      </h2>
                       <p className="detail-lot-id">Lot ID: {selectedOrder.lotId}</p>
                       <div className="detail-specs-row">
                         <span>Floor Price: <strong>{formatMoney(selectedOrder.floorPrice)}</strong></span>
