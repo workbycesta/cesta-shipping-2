@@ -359,7 +359,7 @@ function ShopPage() {
   const [priceTo, setPriceTo] = useState(12000000)
 
   const [page, setPage] = useState(1)
-  const [meta, setMeta] = useState({ current_page: 1, total_pages: 1, total_count: 0 })
+  const [meta, setMeta] = useState({ current_page: 1, total_pages: 1, total_count: 0, active_lots: 0 })
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -443,7 +443,8 @@ function ShopPage() {
         setMeta({
           current_page: data?.meta?.current_page || page,
           total_pages: data?.meta?.total_pages || 1,
-          total_count: data?.meta?.total_count || 0
+          total_count: data?.meta?.total_count || 0,
+          active_lots: data?.active_lots ?? 0
         })
       } catch (err) {
         setError(err.message)
@@ -512,6 +513,19 @@ function ShopPage() {
 
   const displayPriceFrom = applyPriceHike(priceFrom)
   const displayPriceTo = applyPriceHike(priceTo)
+
+  const isDefaultView = !searchText
+    && selectedCategories.length === 0
+    && selectedSubCategories.length === 0
+    && selectedConditions.length === 0
+    && selectedLocations.length === 0
+    && !orgName
+    && priceFrom === (filterOptions.price_range?.min_price ?? 0)
+    && priceTo === (filterOptions.price_range?.max_price ?? 12000000)
+
+  const liveLotsCount = isDefaultView && meta.active_lots
+    ? meta.active_lots
+    : (meta.total_count || products.length)
 
   return (
     <div className="page">
@@ -647,7 +661,7 @@ function ShopPage() {
           </form>
 
           <div className="sort-row">
-            <p>{meta.total_count || products.length} Live Lots (Hybrid)</p>
+            <p>{liveLotsCount} Live Lots (Hybrid)</p>
             <select
               value={selectedSort.label}
               onChange={(e) => {
