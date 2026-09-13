@@ -1,7 +1,7 @@
 import { useAdmin } from './AdminContext'
 
 export function usePrice() {
-  const { applyPriceHike } = useAdmin()
+  const { applyPriceHike, timerEarlyHours } = useAdmin()
 
   const formatMoney = (value) => {
     if (value === null || value === undefined) return '-'
@@ -18,5 +18,5 @@ export function usePrice() {
     return `₹ ${num.toLocaleString('en-IN')}`
   }
 
-  return { formatMoney, formatRawMoney, applyPriceHike }
+  return { formatMoney, formatRawMoney, applyPriceHike, timerOffsetSeconds: Number(timerEarlyHours ?? 1) * 3600 }
 }

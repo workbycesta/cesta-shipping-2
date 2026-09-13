@@ -22,7 +22,7 @@ const SORT_OPTIONS = [
   { label: 'Price : Low to High', sortBy: '+mrp', selectedSortBy: 'mrp_l_h' }
 ]
 
-const TIMER_OFFSET_SECONDS = 60 * 60
+const TIMER_OFFSET_SECONDS_FALLBACK = 60 * 60
 
 function formatTime(seconds) {
   if (!seconds || seconds <= 0) return '0 Hr 00 Min 00 Sec'
@@ -303,6 +303,65 @@ function RangePriceSection() {
   )
 }
 
+function TimerConfigSection() {
+  const { timerEarlyHours, savePriceConfig } = useAdmin()
+  const [draftHours, setDraftHours] = useState('1')
+  const [status, setStatus] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  // Sync the local editor whenever the server config loads/changes
+  useEffect(() => {
+    setDraftHours(String(timerEarlyHours ?? 1))
+  }, [timerEarlyHours])
+
+  // Nothing is applied to the live website until this is pressed.
+  const save = async () => {
+    setSaving(true)
+    setStatus('')
+    const result = await savePriceConfig({ timerEarlyHours: draftHours })
+    setSaving(false)
+    setStatus(result.ok ? '✅ Saved — live on the website for all devices.' : `❌ ${result.message}`)
+  }
+
+  return (
+    <div className="admin-section">
+      <h2>Timer Config</h2>
+      <p className="admin-desc">
+        How many hours early the product countdown timers should finish compared to the
+        b4traders time. For example, 1 means every timer shows one hour less than the actual
+        remaining time. Set 0 to show the exact time. Nothing changes on the website until
+        you press Save.
+      </p>
+
+      <div className="admin-field">
+        <label htmlFor="timer-early-hours">Timer Earliness</label>
+        <input
+          id="timer-early-hours"
+          type="number"
+          min="0"
+          step="0.5"
+          value={draftHours}
+          onChange={(e) => setDraftHours(e.target.value)}
+        />
+        <span className="admin-unit">hours</span>
+      </div>
+
+      <div className="range-actions">
+        <button
+          type="button"
+          className="admin-login-btn"
+          style={{ marginTop: 0 }}
+          disabled={saving}
+          onClick={save}
+        >
+          {saving ? 'Saving…' : 'Save Timer Config'}
+        </button>
+        {status && <span className="range-status">{status}</span>}
+      </div>
+    </div>
+  )
+}
+
 function AdminPanel() {
   const { logout } = useAdmin()
   const navigate = useNavigate()
@@ -324,6 +383,7 @@ function AdminPanel() {
         </div>
       </div>
       <RangePriceSection />
+      <TimerConfigSection />
 
       <AdminTradersSection />
     </div>
@@ -333,7 +393,8 @@ function AdminPanel() {
 function ShopPage() {
   const { orgName } = useParams()
   const navigate = useNavigate()
-  const { formatMoney, formatRawMoney, applyPriceHike } = usePrice()
+  const { formatMoney, formatRawMoney, applyPriceHike, timerOffsetSeconds } = usePrice()
+  const timerOffset = Number.isFinite(timerOffsetSeconds) ? timerOffsetSeconds : TIMER_OFFSET_SECONDS_FALLBACK
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -433,10 +494,10 @@ function ShopPage() {
         const results = (data?.results || []).map((p) => ({
           ...p,
           endTime: typeof p.bid_remaining_time === 'number'
-            ? now + Math.max(0, p.bid_remaining_time - TIMER_OFFSET_SECONDS) * 1000
+            ? now + Math.max(0, p.bid_remaining_time - timerOffset) * 1000
             : null,
           bid_remaining_time: typeof p.bid_remaining_time === 'number'
-            ? Math.max(0, p.bid_remaining_time - TIMER_OFFSET_SECONDS)
+            ? Math.max(0, p.bid_remaining_time - timerOffset)
             : p.bid_remaining_time
         }))
         setProducts(results)
@@ -464,7 +525,8 @@ function ShopPage() {
     priceFrom,
     priceTo,
     page,
-    orgName
+    orgName,
+    timerOffset
   ])
 
   useEffect(() => {

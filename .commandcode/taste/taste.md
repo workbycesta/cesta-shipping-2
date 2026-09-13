@@ -1,0 +1,1 @@
+- Prefers hardcoded business parameters (e.g., timer offsets, thresholds) to be exposed as configurable settings in the admin panel rather than hardcoded. Confidence: 0.9

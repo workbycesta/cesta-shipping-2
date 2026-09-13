@@ -86,13 +86,16 @@ const priceConfigSchema = new mongoose.Schema({
     }],
     default: buildDefaultRanges
   },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  // Timer earliness (hours): product countdowns show (raw remaining - this).
+  // 1 = current behaviour (timers run one hour early).
+  timerEarlyHours: { type: Number, default: 1, min: 0 }
 })
 
 let PriceConfigModel = null
 
 // In-memory fallback for price config (used when MongoDB is unavailable)
-let memoryPriceConfig = { priceHike: 0, rangeHikes: buildDefaultRanges() }
+let memoryPriceConfig = { priceHike: 0, rangeHikes: buildDefaultRanges(), timerEarlyHours: 1 }
 
 mongoose.set('strictQuery', false)
 if (MONGODB_URI) {
@@ -124,6 +127,9 @@ async function getPriceConfig() {
       }
       if (config) {
         memoryPriceConfig.priceHike = typeof config.priceHike === 'number' ? config.priceHike : 0
+        memoryPriceConfig.timerEarlyHours = typeof config.timerEarlyHours === 'number' && config.timerEarlyHours >= 0
+          ? config.timerEarlyHours
+          : 1
         let stored = Array.isArray(config.rangeHikes) && config.rangeHikes.length
           ? config.rangeHikes
           : buildDefaultRanges()
@@ -138,12 +144,12 @@ async function getPriceConfig() {
         }
         memoryPriceConfig.rangeHikes = stored
       }
-      return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+      return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes, timerEarlyHours: memoryPriceConfig.timerEarlyHours }
     } catch (e) {
       console.error('Price config DB query error, falling back to memory:', e)
     }
   }
-  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes, timerEarlyHours: memoryPriceConfig.timerEarlyHours }
 }
 
 // Keep the old helper working (global default hike)
@@ -200,7 +206,7 @@ function sanitizeRangeHikes(ranges) {
 }
 
 // Save the pricing config (DB + memory cache)
-async function savePriceConfig({ priceHike, rangeHikes }) {
+async function savePriceConfig({ priceHike, rangeHikes, timerEarlyHours }) {
   if (priceHike !== undefined) {
     const num = Number(priceHike)
     if (isNaN(num) || num < 0 || num > 100) {
@@ -211,6 +217,13 @@ async function savePriceConfig({ priceHike, rangeHikes }) {
   if (rangeHikes !== undefined) {
     memoryPriceConfig.rangeHikes = sanitizeRangeHikes(rangeHikes)
   }
+  if (timerEarlyHours !== undefined) {
+    const num = Number(timerEarlyHours)
+    if (isNaN(num) || num < 0) {
+      throw new Error('timerEarlyHours must be a number >= 0')
+    }
+    memoryPriceConfig.timerEarlyHours = num
+  }
   if (isMongoConnected && PriceConfigModel) {
     try {
       await PriceConfigModel.findOneAndUpdate(
@@ -219,6 +232,7 @@ async function savePriceConfig({ priceHike, rangeHikes }) {
           key: 'global',
           priceHike: memoryPriceConfig.priceHike,
           rangeHikes: memoryPriceConfig.rangeHikes,
+          timerEarlyHours: memoryPriceConfig.timerEarlyHours,
           updatedAt: new Date()
         },
         { upsert: true, new: true }
@@ -227,7 +241,7 @@ async function savePriceConfig({ priceHike, rangeHikes }) {
       console.error('Price config DB save error (memory value kept):', e)
     }
   }
-  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes }
+  return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes, timerEarlyHours: memoryPriceConfig.timerEarlyHours }
 }
 
 // Public endpoint: every device reads the same pricing config from here
@@ -241,11 +255,11 @@ app.get('/api/price-config', async (req, res) => {
   }
 })
 
-// Admin endpoint: update the global pricing config (default hike and/or range hikes)
+// Admin endpoint: update the global pricing config (default hike, range hikes, timer earliness)
 app.post('/api/admin/price-config', async (req, res) => {
   try {
-    const { priceHike, rangeHikes } = req.body
-    const saved = await savePriceConfig({ priceHike, rangeHikes })
+    const { priceHike, rangeHikes, timerEarlyHours } = req.body
+    const saved = await savePriceConfig({ priceHike, rangeHikes, timerEarlyHours })
     res.json({ success: true, ...saved })
   } catch (err) {
     console.error('Error saving price config:', err)

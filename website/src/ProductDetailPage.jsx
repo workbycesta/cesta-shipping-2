@@ -6,7 +6,7 @@ import { displayCity } from './displayCity'
 import Header from './Header'
 import './ProductDetailPage.css'
 
-const TIMER_OFFSET_SECONDS = 60 * 60
+const TIMER_OFFSET_SECONDS_FALLBACK = 60 * 60
 
 function formatTime(seconds) {
   if (!seconds || seconds <= 0) return '0 Hr 00 Min 00 Sec'
@@ -21,7 +21,8 @@ function formatTime(seconds) {
 export default function ProductDetailPage() {
   const { id: paramId, orgName } = useParams()
   const navigate = useNavigate()
-  const { formatMoney, formatRawMoney, applyPriceHike } = usePrice()
+  const { formatMoney, formatRawMoney, applyPriceHike, timerOffsetSeconds } = usePrice()
+  const timerOffset = Number.isFinite(timerOffsetSeconds) ? timerOffsetSeconds : TIMER_OFFSET_SECONDS_FALLBACK
   const { user, openSignInModal } = useUser()
 
   // Extract pure ID if slug is included in path
@@ -98,7 +99,7 @@ export default function ProductDetailPage() {
         setTopBrand(data?.top_Brand || [])
 
         if (summary && typeof summary.bid_remaining_time === 'number') {
-          setRemainingTime(Math.max(0, Math.floor(summary.bid_remaining_time - TIMER_OFFSET_SECONDS)))
+          setRemainingTime(Math.max(0, Math.floor(summary.bid_remaining_time - timerOffset)))
         }
       } catch (err) {
         console.error('Error fetching lot details:', err)
@@ -109,7 +110,7 @@ export default function ProductDetailPage() {
     }
 
     fetchDetails()
-  }, [lotId])
+  }, [lotId, timerOffset])
 
   // Fetch Inventories (Manifest items)
   useEffect(() => {

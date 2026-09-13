@@ -9,6 +9,13 @@ const sanitizeHike = (value) => {
   return num
 }
 
+// Clamp helper: timer earliness in hours, 0 or more. Defaults to 1 (current behaviour).
+const sanitizeTimerEarlyHours = (value) => {
+  const num = Number(value)
+  if (isNaN(num) || num < 0) return 1
+  return num
+}
+
 export function AdminProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('admin_auth') === 'true'
@@ -20,6 +27,9 @@ export function AdminProvider({ children }) {
   // raw item price falls inside [min, max). Prices above the last band
   // fall back to the global `priceHike`.
   const [rangeHikes, setRangeHikes] = useState([])
+  // Timer earliness (hours): product countdowns display
+  // (raw remaining time − this). Default 1 = current one-hour-early behaviour.
+  const [timerEarlyHours, setTimerEarlyHours] = useState(1)
 
   // Load the global pricing config from the server on startup
   useEffect(() => {
@@ -35,6 +45,9 @@ export function AdminProvider({ children }) {
         }
         if (data && Array.isArray(data.rangeHikes) && data.rangeHikes.length) {
           setRangeHikes(data.rangeHikes)
+        }
+        if (data && typeof data.timerEarlyHours === 'number') {
+          setTimerEarlyHours(sanitizeTimerEarlyHours(data.timerEarlyHours))
         }
       } catch (err) {
         console.warn('Could not load price config from server:', err)
@@ -65,10 +78,11 @@ export function AdminProvider({ children }) {
 
   // Save BOTH the default hike and the range hikes in one request.
   // Nothing is reflected on the website until this is called.
-  const savePriceConfig = async ({ priceHike: ph, rangeHikes: rh }) => {
+  const savePriceConfig = async ({ priceHike: ph, rangeHikes: rh, timerEarlyHours: teh }) => {
     const body = {}
     if (ph !== undefined) body.priceHike = sanitizeHike(ph)
     if (rh !== undefined) body.rangeHikes = rh
+    if (teh !== undefined) body.timerEarlyHours = sanitizeTimerEarlyHours(teh)
     try {
       const res = await fetch('/api/admin/price-config', {
         method: 'POST',
@@ -82,6 +96,7 @@ export function AdminProvider({ children }) {
       }
       if (typeof data.priceHike === 'number') setPriceHike(sanitizeHike(data.priceHike))
       if (Array.isArray(data.rangeHikes)) setRangeHikes(data.rangeHikes)
+      if (typeof data.timerEarlyHours === 'number') setTimerEarlyHours(sanitizeTimerEarlyHours(data.timerEarlyHours))
       return { ok: true }
     } catch (err) {
       console.error('Failed to save price config:', err)
@@ -121,7 +136,8 @@ export function AdminProvider({ children }) {
       savePriceConfig,
       rangeHikes,
       updateRangeHikes,
-      applyPriceHike
+      applyPriceHike,
+      timerEarlyHours
     }}>
       {children}
     </AdminContext.Provider>
