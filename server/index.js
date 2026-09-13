@@ -267,6 +267,7 @@ if (MONGODB_URI) {
       AdminUserModel = mongoose.model('AdminUser', adminUserSchema)
       AdminActivityModel = mongoose.model('AdminActivity', adminActivitySchema)
       AllotmentModel = mongoose.model('Allotment', allotmentSchema)
+      ManualEndModel = mongoose.model('ManualEnd', manualEndSchema)
       ensureSuperAdmin()
     })
     .catch((err) => {
@@ -514,6 +515,96 @@ async function saveAllotment({ lotId, email, name, amount, mode, by }) {
     }
   }
   return allotmentPublic(entry)
+}
+
+// MongoDB Schema for manual end-bidding: admin can close a lot early, even if
+// the b4traders timer is still running. One entry per lot; deleting it reopens.
+const manualEndSchema = new mongoose.Schema({
+  lotId: { type: String, required: true, unique: true },
+  endedBy: { type: String, default: '' },
+  endedAt: { type: Date, default: Date.now }
+})
+
+let ManualEndModel = null
+// In-memory fallback for manual ends (used only when MongoDB is unavailable)
+const memoryManualEnds = new Map() // lotId -> entry
+
+function manualEndPublic(a) {
+  if (!a) return null
+  return {
+    lotId: String(a.lotId),
+    endedBy: a.endedBy || '',
+    endedAt: a.endedAt
+  }
+}
+
+async function isLotManuallyEnded(lotId) {
+  const key = String(lotId)
+  if (memoryManualEnds.has(key)) return true
+  if (isMongoConnected && ManualEndModel) {
+    try {
+      const doc = await ManualEndModel.findOne({ lotId: key }).lean()
+      if (doc) {
+        memoryManualEnds.set(key, manualEndPublic(doc))
+        return true
+      }
+    } catch (e) {
+      console.error('ManualEnd DB query error:', e.message)
+    }
+  }
+  return false
+}
+
+async function getManualEndsForLots(lotIds) {
+  const map = {}
+  const keys = [...new Set((lotIds || []).map(String))]
+  if (keys.length === 0) return map
+  for (const k of keys) {
+    if (memoryManualEnds.has(k)) map[k] = manualEndPublic(memoryManualEnds.get(k))
+  }
+  const missing = keys.filter((k) => !map[k])
+  if (missing.length > 0 && isMongoConnected && ManualEndModel) {
+    try {
+      const docs = await ManualEndModel.find({ lotId: { $in: missing } }).lean()
+      for (const d of docs) {
+        const pub = manualEndPublic(d)
+        map[String(d.lotId)] = pub
+        memoryManualEnds.set(String(d.lotId), pub)
+      }
+    } catch (e) {
+      console.error('ManualEnds DB query error:', e.message)
+    }
+  }
+  return map
+}
+
+async function saveManualEnd(lotId, by) {
+  const entry = {
+    lotId: String(lotId),
+    endedBy: String(by || ''),
+    endedAt: new Date()
+  }
+  memoryManualEnds.set(entry.lotId, entry)
+  if (isMongoConnected && ManualEndModel) {
+    try {
+      await ManualEndModel.findOneAndUpdate({ lotId: entry.lotId }, entry, { upsert: true, new: true })
+    } catch (e) {
+      console.error('ManualEnd DB save error (memory value kept):', e.message)
+    }
+  }
+  return manualEndPublic(entry)
+}
+
+async function clearManualEnd(lotId) {
+  const key = String(lotId)
+  memoryManualEnds.delete(key)
+  if (isMongoConnected && ManualEndModel) {
+    try {
+      await ManualEndModel.findOneAndDelete({ lotId: key })
+    } catch (e) {
+      console.error('ManualEnd DB delete error:', e.message)
+    }
+  }
 }
 
 // Public endpoint: every device reads the same pricing config from here
@@ -1101,12 +1192,22 @@ async function fetchLotTimerInfo(lotId) {
 }
 
 // Our website timer runs `timerEarlyHours` earlier than the b4 timer.
+// A manually ended lot always reads as finished: ourRemaining 0 + ended flag.
 async function ourRemainingSecFor(lotId) {
   const config = await getPriceConfig()
   const timer = await fetchLotTimerInfo(lotId)
-  if (timer.originalRemainingSec === null) return { timer, ourRemaining: null, timerEarlyHours: config.timerEarlyHours }
+  const manualEnded = await isLotManuallyEnded(lotId)
+  if (manualEnded) {
+    return {
+      timer: { ...timer, ended: true, originalRemainingSec: 0 },
+      ourRemaining: 0,
+      timerEarlyHours: config.timerEarlyHours,
+      manuallyEnded: true
+    }
+  }
+  if (timer.originalRemainingSec === null) return { timer, ourRemaining: null, timerEarlyHours: config.timerEarlyHours, manuallyEnded: false }
   const earlySec = Number(config.timerEarlyHours || 0) * 3600
-  return { timer, ourRemaining: Math.max(0, timer.originalRemainingSec - earlySec), timerEarlyHours: config.timerEarlyHours }
+  return { timer, ourRemaining: Math.max(0, timer.originalRemainingSec - earlySec), timerEarlyHours: config.timerEarlyHours, manuallyEnded: false }
 }
 
 // Admin bulk timers: original b4 countdown + our (early) countdown per lot.
@@ -1117,10 +1218,23 @@ app.get('/api/admin/lot-timers', adminAuth, async (req, res) => {
     const config = await getPriceConfig()
     const earlySec = Number(config.timerEarlyHours || 0) * 3600
     const timers = {}
+    const manualEnds = await getManualEndsForLots(ids)
     await Promise.all(ids.map(async (id) => {
       const t = await fetchLotTimerInfo(id)
       const orig = t.originalRemainingSec
-      timers[id] = { ...t, ourRemainingSec: orig === null ? null : Math.max(0, orig - earlySec) }
+      const manual = manualEnds[id] || null
+      if (manual) {
+        timers[id] = {
+          ...t,
+          originalRemainingSec: 0,
+          ourRemainingSec: 0,
+          ended: true,
+          manuallyEnded: true,
+          manualEnd: manual
+        }
+        return
+      }
+      timers[id] = { ...t, ourRemainingSec: orig === null ? null : Math.max(0, orig - earlySec), manuallyEnded: false }
     }))
     res.json({ success: true, timerEarlyHours: config.timerEarlyHours, timers })
   } catch (err) {
@@ -1155,6 +1269,11 @@ app.post('/api/bids', async (req, res) => {
     // Bids must be in multiples of 1000 (1000, 2000, 3000, ...)
     if (numBid % 1000 !== 0) {
       return res.status(400).json({ message: 'Bid amount must be in multiples of ₹1,000' })
+    }
+
+    // Block bids on lots the admin closed early.
+    if (await isLotManuallyEnded(lotId)) {
+      return res.status(400).json({ message: 'Bidding for this lot was ended by the admin.' })
     }
 
     // Enforce one ₹1,000 increment above the HIKED floor price server-side so it is
@@ -1345,6 +1464,7 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
 
     const orders = []
     const allotments = await getAllotmentsForLots([...lotMap.keys()])
+    const manualEnds = await getManualEndsForLots([...lotMap.keys()])
 
     for (const [lotId, bids] of lotMap.entries()) {
       bids.sort((a, b) => b.bidAmount - a.bidAmount || new Date(a.timestamp) - new Date(b.timestamp))
@@ -1362,6 +1482,8 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
         winningUserEmail: topBid.userEmail,
         winningUserName: topBid.userName,
         allotment: allotmentPublic(allotments[String(lotId)]) || null,
+        manuallyEnded: !!manualEnds[String(lotId)],
+        manualEnd: manualEnds[String(lotId)] || null,
         bidders: bids.map(b => ({
           id: b.id,
           userEmail: b.userEmail,
@@ -1385,6 +1507,49 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin orders:', err)
     res.status(500).json({ message: 'Failed to fetch admin orders', error: err.message })
+  }
+})
+
+// End bidding for a lot RIGHT NOW (manual override, even if the b4 timer is
+// still running). After this, the admin timer reads 00:00:00 and the winner
+// can be assigned. Reopening deletes the manual-end entry.
+app.post('/api/admin/orders/:lotId/end-bidding', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId)
+    const allBids = await getAllBids()
+    const lotBids = allBids.filter((b) => String(b.lotId) === lotId)
+    if (lotBids.length === 0) {
+      return res.status(404).json({ message: 'No bids found for this lot' })
+    }
+    const manualEnd = await saveManualEnd(lotId, req.adminUsername)
+    await logAdminActivity(
+      req.adminUsername,
+      'end_bidding',
+      `Lot ${lotId} bidding ended early by admin`,
+      'orders'
+    )
+    res.json({ success: true, manualEnd })
+  } catch (err) {
+    console.error('Error ending bidding:', err)
+    res.status(500).json({ message: 'Failed to end bidding', error: err.message })
+  }
+})
+
+// Reopen bidding for a manually ended lot.
+app.post('/api/admin/orders/:lotId/reopen-bidding', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId)
+    await clearManualEnd(lotId)
+    await logAdminActivity(
+      req.adminUsername,
+      'reopen_bidding',
+      `Lot ${lotId} bidding reopened by admin`,
+      'orders'
+    )
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error reopening bidding:', err)
+    res.status(500).json({ message: 'Failed to reopen bidding', error: err.message })
   }
 })
 
@@ -1455,7 +1620,8 @@ app.post('/api/admin/orders/:lotId/assign', adminAuth, async (req, res) => {
 app.get('/api/allotments/:lotId', async (req, res) => {
   try {
     const allotment = await getAllotment(req.params.lotId)
-    res.json({ success: true, allotment })
+    const manuallyEnded = await isLotManuallyEnded(req.params.lotId)
+    res.json({ success: true, allotment, manuallyEnded })
   } catch (err) {
     console.error('Error fetching allotment:', err)
     res.status(500).json({ message: 'Failed to fetch allotment', error: err.message })
@@ -1464,7 +1630,8 @@ app.get('/api/allotments/:lotId', async (req, res) => {
 app.get('/api/lots/:lotId/allotment', async (req, res) => {
   try {
     const allotment = await getAllotment(req.params.lotId)
-    res.json({ success: true, allotment })
+    const manuallyEnded = await isLotManuallyEnded(req.params.lotId)
+    res.json({ success: true, allotment, manuallyEnded })
   } catch (err) {
     console.error('Error fetching allotment:', err)
     res.status(500).json({ message: 'Failed to fetch allotment', error: err.message })
@@ -1483,12 +1650,13 @@ app.get('/api/users/allotments', async (req, res) => {
     const mine = allBids.filter((b) => b.userEmail === email)
     const lotIds = [...new Set(mine.map((b) => String(b.lotId)))]
     const allotments = await getAllotmentsForLots(lotIds)
+    const manualEnds = await getManualEndsForLots(lotIds)
     const summary = await Promise.all(lotIds.map(async (lotId) => {
       const lotBids = allBids.filter((b) => String(b.lotId) === lotId)
       const top = lotBids.reduce((max, b) => (b.bidAmount > (max?.bidAmount || 0) ? b : max), null)
       const userTop = mine.filter((b) => String(b.lotId) === lotId)
         .reduce((max, b) => (b.bidAmount > (max?.bidAmount || 0) ? b : max), null)
-      const { ourRemaining, timer } = await ourRemainingSecFor(lotId)
+      const { ourRemaining, timer, manuallyEnded } = await ourRemainingSecFor(lotId)
       const allotment = allotments[lotId] || null
       return {
         lotId,
@@ -1496,6 +1664,7 @@ app.get('/api/users/allotments', async (req, res) => {
         userHighestBid: userTop?.bidAmount || 0,
         topBidAmount: top?.bidAmount || 0,
         ourTimerEnded: ourRemaining !== null && ourRemaining <= 0,
+        manuallyEnded: !!manuallyEnded || !!manualEnds[lotId],
         timerReachable: timer.reachable !== false,
         sourceEnded: !!timer.ended,
         allotment,

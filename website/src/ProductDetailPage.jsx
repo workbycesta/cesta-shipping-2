@@ -57,6 +57,7 @@ export default function ProductDetailPage() {
 
   // Allotment for this lot (visible after our timer runs out)
   const [allotInfo, setAllotInfo] = useState(null)
+  const [biddingClosedEarly, setBiddingClosedEarly] = useState(false)
 
   useEffect(() => {
     if (!lotId) return
@@ -66,7 +67,12 @@ export default function ProductDetailPage() {
         const res = await fetch(`/api/allotments/${lotId}`)
         if (!res.ok) return
         const data = await res.json()
-        if (!cancelled) setAllotInfo(data.allotment || null)
+        if (cancelled) return
+        setAllotInfo(data.allotment || null)
+        if (data.manuallyEnded) {
+          setBiddingClosedEarly(true)
+          setRemainingTime(0)
+        }
       } catch {
         // Allotment is informational — never break the page over it.
       }
@@ -233,6 +239,11 @@ export default function ProductDetailPage() {
     e.preventDefault()
     setBiddingError('')
 
+    if (biddingClosedEarly) {
+      setBiddingError('Bidding for this lot was ended by the admin.')
+      return
+    }
+
     if (!user) {
       openSignInModal()
       return
@@ -380,10 +391,16 @@ export default function ProductDetailPage() {
           {/* RIGHT: Product Details & Action Box */}
           <div className="pdp-info">
             {/* Display the upstream countdown one hour earlier for each active lot. */}
-            {remainingTime > 0 && (
+            {biddingClosedEarly ? (
               <div className="pdp-timer-badge">
-                ⏱ {formatTime(remainingTime)}
+                ⏱ 0 Hr 00 Min 00 Sec — bidding ended
               </div>
+            ) : (
+              remainingTime > 0 && (
+                <div className="pdp-timer-badge">
+                  ⏱ {formatTime(remainingTime)}
+                </div>
+              )
             )}
 
             <h1 className="pdp-title">{lotSummary.lot_name}</h1>
@@ -457,9 +474,10 @@ export default function ProductDetailPage() {
                     placeholder={`Min. ${formatRawMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
+                    disabled={biddingClosedEarly}
                   />
-                  <button type="submit" className="btn-submit-bid" disabled={submittingBid}>
-                    {submittingBid ? 'SUBMITTING...' : 'SUBMIT BID'}
+                  <button type="submit" className="btn-submit-bid" disabled={submittingBid || biddingClosedEarly}>
+                    {biddingClosedEarly ? 'BIDDING ENDED' : submittingBid ? 'SUBMITTING...' : 'SUBMIT BID'}
                   </button>
                 </div>
                 <p className="bid-hint">Bids must be in multiples of ₹1,000</p>

@@ -195,7 +195,7 @@ export default function MyAccountPage() {
                 const info = allotments[bid.lotId]
                 const allotted = !!info?.allotment
                 const allottedToMe = !!info?.allottedToMe
-                const timerDone = !!info?.ourTimerEnded
+                const timerDone = !!info?.ourTimerEnded || !!info?.manuallyEnded
                 return (
                   <div key={bid.lotId} className={`bid-card ${allotted ? (allottedToMe ? 'card-winning' : 'card-losing') : (isWinning ? 'card-winning' : 'card-losing')}`}>
                     <div className="bid-card-header">

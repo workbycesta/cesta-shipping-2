@@ -65,6 +65,7 @@ export default function AdminOrdersDashboard() {
   const [customBidder, setCustomBidder] = useState('')
   const [assignBusy, setAssignBusy] = useState(false)
   const [assignMsg, setAssignMsg] = useState('')
+  const [endBusy, setEndBusy] = useState(false)
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -121,7 +122,7 @@ export default function AdminOrdersDashboard() {
         let changed = false
         for (const id of ids) {
           const t = next[id]
-          if (!t || t.ended) continue
+          if (!t || t.ended || t.manuallyEnded) continue
           const dec = (v) => (typeof v === 'number' && v > 0 ? v - 1 : v)
           const orig = dec(t.originalRemainingSec)
           const ours = dec(t.ourRemainingSec)
@@ -199,6 +200,74 @@ export default function AdminOrdersDashboard() {
     }
   }
 
+  const endBiddingNow = async () => {
+    if (!selectedOrder || endBusy) return
+    if (!window.confirm(`End bidding for "${selectedOrder.lotName}" right now? The timer will go to 00:00:00 and you can assign a winner immediately.`)) return
+    setEndBusy(true)
+    setAssignMsg('')
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedOrder.lotId}/end-bidding`, {
+        method: 'POST',
+        headers: adminHeaders()
+      })
+      handleUnauthorized(res)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to end bidding')
+      setOrdersData((prev) => ({
+        ...prev,
+        orders: (prev.orders || []).map((o) =>
+          o.lotId === selectedOrder.lotId ? { ...o, manuallyEnded: true, manualEnd: data.manualEnd || o.manualEnd } : o
+        )
+      }))
+      setTimers((prev) => ({
+        ...prev,
+        [selectedOrder.lotId]: {
+          ...(prev[selectedOrder.lotId] || {}),
+          lotId: selectedOrder.lotId,
+          reachable: true,
+          ended: true,
+          originalRemainingSec: 0,
+          ourRemainingSec: 0,
+          manuallyEnded: true,
+          manualEnd: data.manualEnd || null
+        }
+      }))
+      setAssignMsg('✅ Bidding ended — timer is 00:00:00, you can assign a winner now.')
+    } catch (err) {
+      setAssignMsg(`❌ ${err.message}`)
+    } finally {
+      setEndBusy(false)
+    }
+  }
+
+  const reopenBidding = async () => {
+    if (!selectedOrder || endBusy) return
+    if (!window.confirm(`Reopen bidding for "${selectedOrder.lotName}"? The live timer will resume.`)) return
+    setEndBusy(true)
+    setAssignMsg('')
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedOrder.lotId}/reopen-bidding`, {
+        method: 'POST',
+        headers: adminHeaders()
+      })
+      handleUnauthorized(res)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to reopen bidding')
+      setOrdersData((prev) => ({
+        ...prev,
+        orders: (prev.orders || []).map((o) =>
+          o.lotId === selectedOrder.lotId ? { ...o, manuallyEnded: false, manualEnd: null } : o
+        )
+      }))
+      await fetchTimers([selectedOrder.lotId])
+      setAssignMsg('↩️ Bidding reopened — live timer resumed.')
+    } catch (err) {
+      setAssignMsg(`❌ ${err.message}`)
+    } finally {
+      setEndBusy(false)
+    }
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="admin-orders-page">
@@ -224,7 +293,8 @@ export default function AdminOrdersDashboard() {
 
   const selectedOrder = (ordersData.orders || []).find((o) => o.lotId === selectedLotId) || filteredOrders[0]
   const selectedTimer = selectedOrder ? timers[selectedOrder.lotId] : null
-  const ourTimerDone = selectedTimer ? selectedTimer.ended || (selectedTimer.ourRemainingSec !== null && selectedTimer.ourRemainingSec <= 0) : false
+  const manuallyEnded = !!(selectedOrder?.manuallyEnded || selectedTimer?.manuallyEnded)
+  const ourTimerDone = manuallyEnded || (selectedTimer ? selectedTimer.ended || (selectedTimer.ourRemainingSec !== null && selectedTimer.ourRemainingSec <= 0) : false)
 
   const totalVolume = (ordersData.orders || []).reduce((acc, o) => acc + (o.currentTopBid || 0), 0)
 
@@ -310,6 +380,9 @@ export default function AdminOrdersDashboard() {
                         <span className="summary-lot-id">Lot #{order.lotId}</span>
                         <span className="bids-count-pill">{order.totalBidsCount} Bids</span>
                       </div>
+                      {(order.manuallyEnded || timers[order.lotId]?.manuallyEnded) && (
+                        <div className="summary-ended-early">⏹ Ended early by admin</div>
+                      )}
                       <h4 className="summary-title">
                         <Link
                           to={`/product_detail/${order.lotId}`}
@@ -357,13 +430,40 @@ export default function AdminOrdersDashboard() {
                       <p className="detail-lot-id">Lot ID: {selectedOrder.lotId}</p>
                       <div className="detail-timers-box">
                         <DualTimer timer={selectedTimer} earlyHours={earlyHours} />
-                        {selectedTimer && !selectedTimer.ended && selectedTimer.ourRemainingSec !== null && (
+                        {manuallyEnded ? (
+                          <span className="detail-timer-note">
+                            Bidding ended early by admin — timer is 00:00:00, you can assign now.
+                          </span>
+                        ) : selectedTimer && !selectedTimer.ended && selectedTimer.ourRemainingSec !== null ? (
                           <span className="detail-timer-note">
                             {selectedTimer.ourRemainingSec > 0
-                              ? 'Assign unlocks after our timer hits 00:00:00.'
+                              ? 'Assign unlocks after our timer hits 00:00:00 — or end bidding now.'
                               : 'Our timer is done — you can assign now.'}
                           </span>
-                        )}
+                        ) : null}
+                        <div className="end-bidding-row">
+                          {!manuallyEnded ? (
+                            <button
+                              type="button"
+                              className="btn-end-bidding"
+                              disabled={endBusy || ourTimerDone}
+                              onClick={endBiddingNow}
+                              title="Stop this bidding right now; the timer goes to 00:00:00 and you can assign a winner"
+                            >
+                              {endBusy ? 'Ending…' : '⏹ End Bidding Now'}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-reopen-bidding"
+                              disabled={endBusy}
+                              onClick={reopenBidding}
+                              title="Resume the live timer and reopen bidding"
+                            >
+                              {endBusy ? 'Working…' : '↩️ Reopen Bidding'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="detail-specs-row">
                         <span>Floor Price: <strong>{formatRawMoney(Math.ceil(Number(selectedOrder.floorPrice) / 1000 - 1e-9) * 1000)}</strong></span>

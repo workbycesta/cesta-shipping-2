@@ -543,6 +543,64 @@
   color: #64748b;
 }
 
+.end-bidding-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-end-bidding {
+  background: #dc2626;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-end-bidding:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.btn-end-bidding:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-reopen-bidding {
+  background: #ffffff;
+  color: #0369a1;
+  border: 1px solid #0284c7;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-reopen-bidding:hover:not(:disabled) {
+  background: #f0f9ff;
+}
+
+.btn-reopen-bidding:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summary-ended-early {
+  font-size: 11px;
+  color: #991b1b;
+  font-weight: 700;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
 .assign-box {
   background: #fffbeb;
   border: 1px solid #fde68a;
