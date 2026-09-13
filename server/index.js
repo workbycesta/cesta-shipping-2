@@ -160,6 +160,21 @@ async function getPriceHike() {
   return config.priceHike
 }
 
+// Ceil to the next ₹1000 multiple, tolerant of float dust like
+// 100000*1.1 = 110000.00000000001 (must stay 110000, not jump to 111000).
+function ceilTo1000(value) {
+  return Math.ceil(Number(value) / 1000 - 1e-9) * 1000
+}
+
+// Which hike percent applies to a raw price: matching custom range (inclusive,
+// always wins) or the global default hike.
+function hikePercentFor(rawPrice, priceHike = 0, rangeHikes = []) {
+  const numPrice = Number(rawPrice)
+  if (isNaN(numPrice) || numPrice <= 0) return Number(priceHike) || 0
+  const band = (rangeHikes || []).find((r) => numPrice >= Number(r.min) && numPrice <= Number(r.max))
+  return band ? Number(band.percent) : (Number(priceHike) || 0)
+}
+
 // Calculate hiked price based on global priceHike or matching custom range.
 // Boundaries are inclusive (min <= price <= max); ranges never overlap, so at
 // most one band matches. A matching custom band ALWAYS wins — even at 0% —
@@ -167,15 +182,31 @@ async function getPriceHike() {
 function applyPriceHikeToNumber(price, priceHike = 0, rangeHikes = []) {
   const numPrice = Number(price)
   if (isNaN(numPrice) || numPrice <= 0) return price
-  let percent = priceHike
-  if (Array.isArray(rangeHikes) && rangeHikes.length > 0) {
-    const band = rangeHikes.find((r) => numPrice >= Number(r.min) && numPrice <= Number(r.max))
-    if (band) {
-      percent = Number(band.percent)
-    }
-  }
+  const percent = hikePercentFor(numPrice, priceHike, rangeHikes)
   const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
   return Math.round(hiked)
+}
+
+// Scale exact (unrounded) hiked row values so they sum to EXACTLY `target`
+// whole rupees, distributing the rounding difference proportionately via the
+// largest-remainder method. See manifest-floor-adjustment.md for the formula.
+function adjustProportionallyTo(exactValues, target) {
+  const t = Math.round(Number(target))
+  const ideals = exactValues.map((v) => Number(v))
+  if (!Number.isFinite(t) || t <= 0 || ideals.length === 0) return null
+  if (ideals.some((v) => !Number.isFinite(v) || v < 0)) return null
+  const total = ideals.reduce((a, b) => a + b, 0)
+  if (total <= 0) return null
+  const k = t / total
+  const floors = ideals.map((v) => Math.floor(v * k))
+  let deficit = t - floors.reduce((a, b) => a + b, 0)
+  const remainders = ideals.map((v, i) => ({ i, frac: v * k - floors[i], ideal: v * k }))
+  remainders.sort((a, b) => b.frac - a.frac || b.ideal - a.ideal)
+  const result = floors.slice()
+  for (let j = 0; j < deficit && j < remainders.length; j++) {
+    result[remainders[j].i] += 1
+  }
+  return result
 }
 
 // Validate custom admin-defined ranges: numeric bounds, sane values,
@@ -949,15 +980,37 @@ async function buildManifestExcel(lotId) {
               return str.includes('floor price') || str === 'floor_price'
             })
 
-            // Hike Floor Price in every row
+            // Hike Floor Price in every row (exact, unrounded), then scale all rows
+            // proportionately so the column sums to EXACTLY the website floor
+            // price (largest-remainder; see manifest-floor-adjustment.md).
+            const hikedRows = []
             for (let i = 1; i < rows.length; i++) {
               const row = rows[i]
               if (!row || row.length === 0) continue
               if (floorPriceIdx !== -1 && row[floorPriceIdx] !== undefined && row[floorPriceIdx] !== '') {
                 const rawVal = Number(row[floorPriceIdx])
-                if (!isNaN(rawVal)) {
-                  row[floorPriceIdx] = applyPriceHikeToNumber(rawVal, priceHike, rangeHikes)
+                if (!isNaN(rawVal) && rawVal > 0) {
+                  const percent = hikePercentFor(rawVal, priceHike, rangeHikes)
+                  hikedRows.push({ row, exact: rawVal * (1 + percent / 100) })
+                  continue
                 }
+              }
+              // Non-numeric / blank / zero cells stay untouched and are excluded.
+              hikedRows.push({ row, exact: null })
+            }
+
+            const rawLotFloor = Number(summary?.floor_price)
+            const websiteFloor = Number.isFinite(rawLotFloor) && rawLotFloor > 0
+              ? ceilTo1000(rawLotFloor * (1 + hikePercentFor(rawLotFloor, priceHike, rangeHikes) / 100))
+              : 0
+            const scalable = hikedRows.filter((r) => r.exact !== null)
+            const adjusted = adjustProportionallyTo(scalable.map((r) => r.exact), websiteFloor)
+            if (adjusted) {
+              scalable.forEach((r, idx) => { r.row[floorPriceIdx] = adjusted[idx] })
+            } else {
+              // No valid target (or no scalable rows): fall back to plain per-row hike.
+              for (const r of hikedRows) {
+                if (r.exact !== null) r.row[floorPriceIdx] = Math.round(r.exact)
               }
             }
 
@@ -1003,10 +1056,14 @@ async function buildManifestExcel(lotId) {
       ]
 
       const rows = [headers]
+      const fallbackExact = []
       for (const p of allProducts) {
         const rawMrp = Number(p.mrp || 0)
         const rawItemFloorPrice = Number(p.floor_price || 0) || (summary.mrp ? Math.round((rawMrp / summary.mrp) * summary.floor_price) : 0)
-        const hikedFloorPrice = applyPriceHikeToNumber(rawItemFloorPrice, priceHike, rangeHikes)
+        // Keep the EXACT hiked value; whole-rupee adjustment happens below.
+        const percent = hikePercentFor(rawItemFloorPrice, priceHike, rangeHikes)
+        const exact = rawItemFloorPrice > 0 ? rawItemFloorPrice * (1 + percent / 100) : 0
+        fallbackExact.push(exact)
 
         rows.push([
           p.description || p.title || '',
@@ -1027,8 +1084,25 @@ async function buildManifestExcel(lotId) {
           summary.grade_name || 'Not Tested',
           p.description || '',
           'NA',
-          hikedFloorPrice
+          0 // placeholder: replaced by the proportional adjustment below
         ])
+      }
+
+      // Scale all fallback rows proportionately to the website floor price.
+      // Zero-floor rows keep 0 and are excluded from the scaling.
+      const rawLotFloor = Number(summary?.floor_price)
+      const websiteFloor = Number.isFinite(rawLotFloor) && rawLotFloor > 0
+        ? ceilTo1000(rawLotFloor * (1 + hikePercentFor(rawLotFloor, priceHike, rangeHikes) / 100))
+        : 0
+      const scalableIdx = fallbackExact.map((v, i) => (v > 0 ? i : -1)).filter((i) => i !== -1)
+      const adjusted = adjustProportionallyTo(scalableIdx.map((i) => fallbackExact[i]), websiteFloor)
+      for (let i = 0; i < fallbackExact.length; i++) {
+        if (adjusted) {
+          const pos = scalableIdx.indexOf(i)
+          rows[i + 1][22] = pos !== -1 ? adjusted[pos] : 0
+        } else {
+          rows[i + 1][22] = Math.round(fallbackExact[i])
+        }
       }
 
       const newSheet = XLSX.utils.aoa_to_sheet(rows)

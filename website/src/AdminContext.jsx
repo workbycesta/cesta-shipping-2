@@ -121,8 +121,10 @@ export function AdminProvider({ children }) {
     // Step 1: add the hike on top of the raw API price (rounding only AFTER this step, never before)
     const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
     // Step 2: round UP to the next ₹1000 multiple for display pricing
-    // e.g. 1200 -> 2000, 5600 -> 6000, exact multiples stay as-is (2000 -> 2000)
-    return Math.ceil(hiked / 1000) * 1000
+    // e.g. 1200 -> 2000, 5600 -> 6000, exact multiples stay as-is (2000 -> 2000).
+    // The 1e-9 tolerance guards against float dust like 100000*1.1 computing as
+    // 110000.00000000001 (which must stay 110000, not jump to 111000).
+    return Math.ceil(hiked / 1000 - 1e-9) * 1000
   }
 
   return (
