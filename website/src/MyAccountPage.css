@@ -236,6 +236,32 @@
   color: #64748b;
 }
 
+.allot-banner {
+  font-size: 12px;
+  padding: 9px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.allot-won {
+  background: #f0fdf4;
+  color: #14532d;
+}
+
+.allot-lost {
+  background: #fefce8;
+  color: #713f12;
+}
+
+.allot-pending {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.allot-live {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
 .bid-card-body {
   padding: 16px;
   display: flex;

@@ -55,6 +55,26 @@ export default function ProductDetailPage() {
     userStatus: 'None'
   })
 
+  // Allotment for this lot (visible after our timer runs out)
+  const [allotInfo, setAllotInfo] = useState(null)
+
+  useEffect(() => {
+    if (!lotId) return
+    let cancelled = false
+    const fetchAllotment = async () => {
+      try {
+        const res = await fetch(`/api/lots/${lotId}/allotment`)
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setAllotInfo(data.allotment || null)
+      } catch {
+        // Allotment is informational — never break the page over it.
+      }
+    }
+    fetchAllotment()
+    return () => { cancelled = true }
+  }, [lotId])
+
   const [selectedReason, setSelectedReason] = useState('')
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false)
 
@@ -404,6 +424,22 @@ export default function ProductDetailPage() {
                   ) : (
                     <>🔴 <strong>YOU ARE OUTBID / LOSING!</strong> Your bid: {formatRawMoney(bidStatusInfo.userHighestBid)} (Top bid: {formatRawMoney(bidStatusInfo.topBidAmount)})</>
                   )}
+                </div>
+              )}
+
+              {/* Allotment result, shown after our timer runs out and admin assigns */}
+              {allotInfo && user && (
+                <div className={`pdp-user-status-banner ${allotInfo.allottedToEmail === user.email?.toLowerCase() ? 'banner-winning' : 'banner-losing'}`}>
+                  {allotInfo.allottedToEmail === user.email?.toLowerCase() ? (
+                    <>🎉 <strong>BID ALLOTTED TO YOU</strong> at {formatRawMoney(allotInfo.allottedAmount)}</>
+                  ) : (
+                    <>📌 <strong>Bid allotted</strong> — this lot went to another bidder.</>
+                  )}
+                </div>
+              )}
+              {allotInfo && !user && (
+                <div className="pdp-user-status-banner banner-losing">
+                  📌 <strong>Bid allotted</strong> — bidding is closed for this lot.
                 </div>
               )}
 

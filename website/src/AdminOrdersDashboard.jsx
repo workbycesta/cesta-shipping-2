@@ -4,9 +4,47 @@ import { useAdmin } from './AdminContext'
 import { usePrice } from './usePrice'
 import './AdminOrdersDashboard.css'
 
+function formatCountdown(totalSeconds) {
+  if (totalSeconds === null || totalSeconds === undefined) return '—'
+  if (totalSeconds <= 0) return '00:00:00'
+  const s = Math.floor(totalSeconds)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
+function DualTimer({ timer, earlyHours }) {
+  if (!timer) return <span className="timer-line timer-unknown">Timer: loading…</span>
+  if (timer.reachable === false) {
+    return <span className="timer-line timer-unknown">Timer: source unreachable</span>
+  }
+  if (timer.ended) {
+    return (
+      <span className="timer-line timer-ended">
+        <span className="timer-ended-badge">BIDDING TIME DONE</span>
+        <span className="timer-val">00:00:00</span>
+      </span>
+    )
+  }
+  return (
+    <span className="timer-lines">
+      <span className="timer-line timer-original" title="Exact countdown on b4traders.com">
+        <span className="timer-k">Original:</span>
+        <strong className="timer-val">{formatCountdown(timer.originalRemainingSec)}</strong>
+      </span>
+      <span className="timer-line timer-ours" title={`Our website timer, ${earlyHours}h early`}>
+        <span className="timer-k">Ours (−{earlyHours}h):</span>
+        <strong className="timer-val">{formatCountdown(timer.ourRemainingSec)}</strong>
+      </span>
+    </span>
+  )
+}
+
 export default function AdminOrdersDashboard() {
   const { isAuthenticated, logout, adminHeaders, handleUnauthorized } = useAdmin()
-  const { formatMoney, formatRawMoney } = usePrice()
+  const { formatMoney, formatRawMoney, timerOffsetSeconds } = usePrice()
+  const earlyHours = Number.isFinite(timerOffsetSeconds) ? timerOffsetSeconds / 3600 : 1
   const navigate = useNavigate()
 
   const [ordersData, setOrdersData] = useState({ totalLots: 0, totalBids: 0, orders: [] })
@@ -19,6 +57,14 @@ export default function AdminOrdersDashboard() {
   const [sourcing, setSourcing] = useState(null)
   const [sourcingLoading, setSourcingLoading] = useState(false)
   const [sourcingError, setSourcingError] = useState('')
+
+  // Live b4 timers for every bidded lot: lotId -> { ended, originalRemainingSec, ourRemainingSec, ... }
+  // Ticked down locally every second so the countdowns feel live between refreshes.
+  const [timers, setTimers] = useState({})
+
+  const [customBidder, setCustomBidder] = useState('')
+  const [assignBusy, setAssignBusy] = useState(false)
+  const [assignMsg, setAssignMsg] = useState('')
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -39,8 +85,56 @@ export default function AdminOrdersDashboard() {
     }
   }
 
+  const fetchTimers = async (lotIds) => {
+    if (!lotIds || lotIds.length === 0) return
+    try {
+      const res = await fetch(`/api/admin/lot-timers?lotIds=${encodeURIComponent(lotIds.join(','))}`, { headers: adminHeaders() })
+      handleUnauthorized(res)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data && data.timers) setTimers(data.timers)
+    } catch {
+      // Timers are informational — never break the dashboard over them.
+    }
+  }
+
   useEffect(() => {
     fetchOrders()
+  }, [])
+
+  // Load timers once the order list is known, then re-poll every 60s.
+  useEffect(() => {
+    const ids = (ordersData.orders || []).map((o) => o.lotId)
+    if (ids.length === 0) return
+    fetchTimers(ids)
+    const poll = setInterval(() => fetchTimers(ids), 60000)
+    return () => clearInterval(poll)
+  }, [(ordersData.orders || []).map((o) => o.lotId).join(',')])
+
+  // Tick every timer down locally each second.
+  useEffect(() => {
+    const tick = setInterval(() => {
+      setTimers((prev) => {
+        const ids = Object.keys(prev)
+        if (ids.length === 0) return prev
+        const next = { ...prev }
+        let changed = false
+        for (const id of ids) {
+          const t = next[id]
+          if (!t || t.ended) continue
+          const dec = (v) => (typeof v === 'number' && v > 0 ? v - 1 : v)
+          const orig = dec(t.originalRemainingSec)
+          const ours = dec(t.ourRemainingSec)
+          if (orig !== t.originalRemainingSec || ours !== t.ourRemainingSec) {
+            changed = true
+            const ended = (orig !== null && orig <= 0) || (ours !== null && ours <= 0 && orig <= 0)
+            next[id] = { ...t, originalRemainingSec: orig, ourRemainingSec: ours, ended: ended || t.ended }
+          }
+        }
+        return changed ? next : prev
+      })
+    }, 1000)
+    return () => clearInterval(tick)
   }, [])
 
   useEffect(() => {
@@ -49,6 +143,8 @@ export default function AdminOrdersDashboard() {
       setSourcing(null)
       return
     }
+    setCustomBidder('')
+    setAssignMsg('')
     let cancelled = false
     const fetchSourcing = async () => {
       setSourcingLoading(true)
@@ -71,6 +167,37 @@ export default function AdminOrdersDashboard() {
     fetchSourcing()
     return () => { cancelled = true }
   }, [selectedLotId])
+
+  const assignBid = async (mode) => {
+    if (!selectedOrder || assignBusy) return
+    if (mode === 'custom' && !customBidder) {
+      setAssignMsg('❌ Pick a bidder from the list first.')
+      return
+    }
+    setAssignBusy(true)
+    setAssignMsg('')
+    try {
+      const res = await fetch(`/api/admin/orders/${selectedOrder.lotId}/assign`, {
+        method: 'POST',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(mode === 'custom' ? { mode, bidderEmail: customBidder } : { mode: 'highest' })
+      })
+      handleUnauthorized(res)
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to assign bid')
+      setOrdersData((prev) => ({
+        ...prev,
+        orders: (prev.orders || []).map((o) =>
+          o.lotId === selectedOrder.lotId ? { ...o, allotment: data.allotment } : o
+        )
+      }))
+      setAssignMsg(`✅ Allotted to ${data.allotment.allottedToEmail} at ${formatRawMoney(data.allotment.allottedAmount)} (${data.allotment.mode}).`)
+    } catch (err) {
+      setAssignMsg(`❌ ${err.message}`)
+    } finally {
+      setAssignBusy(false)
+    }
+  }
 
   if (!isAuthenticated) {
     return (
@@ -96,6 +223,8 @@ export default function AdminOrdersDashboard() {
   })
 
   const selectedOrder = (ordersData.orders || []).find((o) => o.lotId === selectedLotId) || filteredOrders[0]
+  const selectedTimer = selectedOrder ? timers[selectedOrder.lotId] : null
+  const ourTimerDone = selectedTimer ? selectedTimer.ended || (selectedTimer.ourRemainingSec !== null && selectedTimer.ourRemainingSec <= 0) : false
 
   const totalVolume = (ordersData.orders || []).reduce((acc, o) => acc + (o.currentTopBid || 0), 0)
 
@@ -147,7 +276,7 @@ export default function AdminOrdersDashboard() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <button className="btn-admin-refresh" onClick={fetchOrders}>
+          <button className="btn-admin-refresh" onClick={() => { fetchOrders(); fetchTimers((ordersData.orders || []).map((o) => o.lotId)) }}>
             🔄 Refresh Live Bids
           </button>
         </div>
@@ -170,6 +299,7 @@ export default function AdminOrdersDashboard() {
               <div className="orders-scroll-list">
                 {filteredOrders.map((order) => {
                   const isSelected = order.lotId === selectedLotId
+                  const t = timers[order.lotId]
                   return (
                     <div
                       key={order.lotId}
@@ -190,12 +320,20 @@ export default function AdminOrdersDashboard() {
                           {order.lotName}
                         </Link>
                       </h4>
+                      <div className="summary-timer-row">
+                        <DualTimer timer={t} earlyHours={earlyHours} />
+                      </div>
                       <div className="summary-price-row">
                         <span>Top Bid: <strong>{formatRawMoney(order.currentTopBid)}</strong></span>
                       </div>
                       <div className="summary-winner">
                         🏆 Leader: <span>{order.winningUserEmail}</span>
                       </div>
+                      {order.allotment && (
+                        <div className="summary-allotted">
+                          ✅ Allotted to <span>{order.allotment.allottedToEmail}</span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -217,6 +355,16 @@ export default function AdminOrdersDashboard() {
                         </Link>
                       </h2>
                       <p className="detail-lot-id">Lot ID: {selectedOrder.lotId}</p>
+                      <div className="detail-timers-box">
+                        <DualTimer timer={selectedTimer} earlyHours={earlyHours} />
+                        {selectedTimer && !selectedTimer.ended && selectedTimer.ourRemainingSec !== null && (
+                          <span className="detail-timer-note">
+                            {selectedTimer.ourRemainingSec > 0
+                              ? 'Assign unlocks after our timer hits 00:00:00.'
+                              : 'Our timer is done — you can assign now.'}
+                          </span>
+                        )}
+                      </div>
                       <div className="detail-specs-row">
                         <span>Floor Price: <strong>{formatMoney(selectedOrder.floorPrice)}</strong></span>
                         <span>MRP: <strong>{formatRawMoney(selectedOrder.mrp)}</strong></span>
@@ -279,6 +427,60 @@ export default function AdminOrdersDashboard() {
                     )}
                   </div>
 
+                  {/* Bid allotment: enabled only after our website timer runs out */}
+                  <div className="assign-box">
+                    <h3>Bid Allotment</h3>
+                    {selectedOrder.allotment ? (
+                      <div className="assign-done">
+                        ✅ Allotted to <strong>{selectedOrder.allotment.allottedToEmail}</strong>
+                        {' '}at <strong>{formatRawMoney(selectedOrder.allotment.allottedAmount)}</strong>
+                        {' '}({selectedOrder.allotment.mode === 'custom' ? 'custom pick' : 'highest bidder'}
+                        {selectedOrder.allotment.allottedBy ? ` · by ${selectedOrder.allotment.allottedBy}` : ''}).
+                        <span className="assign-sub">Re-assigning below overwrites this.</span>
+                      </div>
+                    ) : (
+                      <p className="assign-sub">No allotment yet. The bidder sees the result in My Account once you assign.</p>
+                    )}
+                    {!ourTimerDone && (
+                      <p className="assign-locked">🔒 Our website timer is still running — assignment unlocks at 00:00:00.</p>
+                    )}
+                    <div className="assign-actions">
+                      <button
+                        type="button"
+                        className="btn-assign-highest"
+                        disabled={assignBusy || !ourTimerDone}
+                        onClick={() => assignBid('highest')}
+                        title={ourTimerDone ? 'Assign to the current highest bidder' : 'Available after our timer runs out'}
+                      >
+                        {assignBusy ? 'Assigning…' : `🏆 Assign to Highest Bidder (${selectedOrder.winningUserEmail})`}
+                      </button>
+                      <div className="assign-custom-row">
+                        <select
+                          className="assign-custom-select"
+                          value={customBidder}
+                          onChange={(e) => setCustomBidder(e.target.value)}
+                          disabled={assignBusy || !ourTimerDone}
+                          aria-label="Pick a bidder for custom assignment"
+                        >
+                          <option value="">— Pick a custom bidder —</option>
+                          {[...new Set((selectedOrder.bidders || []).map((b) => b.userEmail))].map((email) => (
+                            <option key={email} value={email}>{email}</option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="btn-assign-custom"
+                          disabled={assignBusy || !ourTimerDone || !customBidder}
+                          onClick={() => assignBid('custom')}
+                          title={ourTimerDone ? 'Assign to the selected bidder' : 'Available after our timer runs out'}
+                        >
+                          {assignBusy ? 'Assigning…' : 'Assign to Custom Bidder'}
+                        </button>
+                      </div>
+                    </div>
+                    {assignMsg && <div className="assign-msg">{assignMsg}</div>}
+                  </div>
+
                   <div className="winning-banner">
                     <div className="winning-trophy">🏆</div>
                     <div className="winning-info">
@@ -304,12 +506,14 @@ export default function AdminOrdersDashboard() {
                         <tbody>
                           {selectedOrder.bidders?.map((bidder, idx) => {
                             const isWinning = bidder.status === 'Winning'
+                            const isAllotted = selectedOrder.allotment?.allottedToEmail === bidder.userEmail
                             return (
                               <tr key={bidder.id || idx} className={isWinning ? 'row-winning' : ''}>
                                 <td className="rank-cell">#{idx + 1}</td>
                                 <td>
                                   <strong>{bidder.userEmail}</strong>
                                   {bidder.userName && <span className="bidder-name-sub"> ({bidder.userName})</span>}
+                                  {isAllotted && <span className="allotted-pill"> ✅ Allotted</span>}
                                 </td>
                                 <td>
                                   <strong className={isWinning ? 'win-amount' : ''}>

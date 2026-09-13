@@ -63,8 +63,23 @@ export default function MyAccountPage() {
   const navigate = useNavigate()
 
   const [bids, setBids] = useState([])
+  const [allotments, setAllotments] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const fetchAllotments = async (email) => {
+    if (!email) return
+    try {
+      const res = await fetch(`/api/users/allotments?email=${encodeURIComponent(email)}`)
+      if (!res.ok) return
+      const data = await res.json()
+      const map = {}
+      for (const a of data.allotments || []) map[a.lotId] = a
+      setAllotments(map)
+    } catch (err) {
+      console.error('Error fetching allotment status:', err)
+    }
+  }
 
   const fetchMyBids = async (showLoading = true) => {
     if (!user) return
@@ -89,10 +104,12 @@ export default function MyAccountPage() {
     }
 
     fetchMyBids(true)
+    fetchAllotments(user.email)
 
     // Auto refresh bids every 10 seconds to update top bids in real time
     const interval = setInterval(() => {
       fetchMyBids(false)
+      fetchAllotments(user.email)
     }, 10000)
 
     return () => clearInterval(interval)
@@ -168,6 +185,10 @@ export default function MyAccountPage() {
             <div className="bids-grid">
               {bids.map((bid) => {
                 const isWinning = bid.status === 'Winning'
+                const info = allotments[bid.lotId]
+                const allotted = !!info?.allotment
+                const allottedToMe = !!info?.allottedToMe
+                const timerDone = !!info?.ourTimerEnded
                 return (
                   <div key={bid.lotId} className={`bid-card ${isWinning ? 'card-winning' : 'card-losing'}`}>
                     <div className="bid-card-header">
@@ -178,6 +199,24 @@ export default function MyAccountPage() {
                         Last Bid: {new Date(bid.lastBidTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
+
+                    {/* Bid allotment status: visible after our timer runs out */}
+                    {info && (
+                      <div className={`allot-banner ${allotted ? (allottedToMe ? 'allot-won' : 'allot-lost') : (timerDone ? 'allot-pending' : 'allot-live')}`}>
+                        {allotted && allottedToMe && (
+                          <>🎉 <strong>BID ALLOTTED TO YOU</strong> at {formatRawMoney(info.allotment.allottedAmount)}</>
+                        )}
+                        {allotted && !allottedToMe && (
+                          <>📌 <strong>Bid allotted</strong> to another bidder — better luck next time.</>
+                        )}
+                        {!allotted && timerDone && (
+                          <>⏳ <strong>Bidding time done</strong> — allotment pending, check back soon.</>
+                        )}
+                        {!allotted && !timerDone && (
+                          <>⏱ <strong>Bidding live</strong> — allotment happens after the timer runs out.</>
+                        )}
+                      </div>
+                    )}
 
                     <div className="bid-card-body">
                       {bid.lotImageUrl && (

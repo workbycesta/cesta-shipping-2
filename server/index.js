@@ -195,6 +195,23 @@ const bidSchema = new mongoose.Schema({
 let BidModel = null
 let isMongoConnected = false
 
+// MongoDB Schema for per-lot bid allotment: after our timer runs out the
+// admin assigns the lot to one bidder (highest bid, or a custom pick).
+// Exactly one allotment per lot; re-assigning overwrites it.
+const allotmentSchema = new mongoose.Schema({
+  lotId: { type: String, required: true, unique: true },
+  allottedToEmail: { type: String, required: true, lowercase: true, trim: true },
+  allottedToName: { type: String, default: '' },
+  allottedAmount: { type: Number, required: true },
+  mode: { type: String, enum: ['highest', 'custom'], default: 'highest' },
+  allottedBy: { type: String, default: '' },
+  allottedAt: { type: Date, default: Date.now }
+})
+
+let AllotmentModel = null
+// In-memory fallback for allotments (used only when MongoDB is unavailable)
+const memoryAllotments = new Map() // lotId -> allotment entry
+
 // MongoDB Schema for Price Config (global pricing settings shared across all devices)
 // Custom price-hike ranges are fully admin-defined: [{ min, max, percent }].
 // Boundaries are INCLUSIVE on both ends (min <= price <= max) and ranges must
@@ -249,6 +266,7 @@ if (MONGODB_URI) {
       TraderModel = mongoose.model('Trader', traderSchema)
       AdminUserModel = mongoose.model('AdminUser', adminUserSchema)
       AdminActivityModel = mongoose.model('AdminActivity', adminActivitySchema)
+      AllotmentModel = mongoose.model('Allotment', allotmentSchema)
       ensureSuperAdmin()
     })
     .catch((err) => {
@@ -430,6 +448,72 @@ async function savePriceConfig({ priceHike, rangeHikes, timerEarlyHours }) {
     }
   }
   return { priceHike: memoryPriceConfig.priceHike, rangeHikes: memoryPriceConfig.rangeHikes, timerEarlyHours: memoryPriceConfig.timerEarlyHours }
+}
+
+// ---------- Bid allotment helpers (one winner per lot, admin-assigned) ----------
+function allotmentPublic(a) {
+  if (!a) return null
+  return {
+    lotId: String(a.lotId),
+    allottedToEmail: String(a.allottedToEmail || '').toLowerCase(),
+    allottedToName: a.allottedToName || '',
+    allottedAmount: Number(a.allottedAmount || 0),
+    mode: a.mode || 'highest',
+    allottedBy: a.allottedBy || '',
+    allottedAt: a.allottedAt
+  }
+}
+
+async function getAllotment(lotId) {
+  const key = String(lotId)
+  if (isMongoConnected && AllotmentModel) {
+    try {
+      const doc = await AllotmentModel.findOne({ lotId: key }).lean()
+      if (doc) return allotmentPublic(doc)
+    } catch (e) {
+      console.error('Allotment DB query error, falling back to memory:', e.message)
+    }
+  }
+  return allotmentPublic(memoryAllotments.get(key)) || null
+}
+
+async function getAllotmentsForLots(lotIds) {
+  const map = {}
+  const keys = [...new Set((lotIds || []).map(String))]
+  if (keys.length === 0) return map
+  if (isMongoConnected && AllotmentModel) {
+    try {
+      const docs = await AllotmentModel.find({ lotId: { $in: keys } }).lean()
+      for (const d of docs) map[String(d.lotId)] = allotmentPublic(d)
+    } catch (e) {
+      console.error('Allotments DB query error, falling back to memory:', e.message)
+    }
+  }
+  for (const k of keys) {
+    if (!map[k] && memoryAllotments.has(k)) map[k] = allotmentPublic(memoryAllotments.get(k))
+  }
+  return map
+}
+
+async function saveAllotment({ lotId, email, name, amount, mode, by }) {
+  const entry = {
+    lotId: String(lotId),
+    allottedToEmail: String(email).toLowerCase().trim(),
+    allottedToName: name || '',
+    allottedAmount: Number(amount),
+    mode: mode === 'custom' ? 'custom' : 'highest',
+    allottedBy: String(by || ''),
+    allottedAt: new Date()
+  }
+  memoryAllotments.set(entry.lotId, entry)
+  if (isMongoConnected && AllotmentModel) {
+    try {
+      await AllotmentModel.findOneAndUpdate({ lotId: entry.lotId }, entry, { upsert: true, new: true })
+    } catch (e) {
+      console.error('Allotment DB save error (memory value kept):', e.message)
+    }
+  }
+  return allotmentPublic(entry)
 }
 
 // Public endpoint: every device reads the same pricing config from here
@@ -982,6 +1066,68 @@ async function fetchLotSourceInfo(lotId) {
   return data
 }
 
+// Live-vs-ended b4 timer for one lot, derived from the lot_details summary
+// (the same payload the b4 product page renders its countdown from).
+const ENDED_SOURCE_STATUSES = new Set(['cancelled', 'ended', 'sold', 'closed', 'completed', 'expired'])
+
+async function fetchLotTimerInfo(lotId) {
+  const key = String(lotId)
+  const info = await fetchLotSourceInfo(key)
+  if (!info) {
+    return { lotId: key, reachable: false, ended: false, originalRemainingSec: null, endDate: '', status: '' }
+  }
+  if (info.ended) {
+    return { lotId: key, reachable: true, ended: true, originalRemainingSec: 0, endDate: '', status: '' }
+  }
+  const s = info.summary || {}
+  const raw = Number(s.bid_remaining_time)
+  let original = Number.isFinite(raw) ? Math.max(0, Math.floor(raw)) : null
+  if (original === null && s.end_date) {
+    const diff = Math.floor((new Date(s.end_date).getTime() - Date.now()) / 1000)
+    if (Number.isFinite(diff)) original = Math.max(0, diff)
+  }
+  const status = s.status || ''
+  const ended = original === null
+    ? ENDED_SOURCE_STATUSES.has(String(status).toLowerCase())
+    : (original <= 0 || ENDED_SOURCE_STATUSES.has(String(status).toLowerCase()))
+  return {
+    lotId: key,
+    reachable: true,
+    ended,
+    originalRemainingSec: ended && original !== null ? 0 : original,
+    endDate: s.end_date || '',
+    status
+  }
+}
+
+// Our website timer runs `timerEarlyHours` earlier than the b4 timer.
+async function ourRemainingSecFor(lotId) {
+  const config = await getPriceConfig()
+  const timer = await fetchLotTimerInfo(lotId)
+  if (timer.originalRemainingSec === null) return { timer, ourRemaining: null, timerEarlyHours: config.timerEarlyHours }
+  const earlySec = Number(config.timerEarlyHours || 0) * 3600
+  return { timer, ourRemaining: Math.max(0, timer.originalRemainingSec - earlySec), timerEarlyHours: config.timerEarlyHours }
+}
+
+// Admin bulk timers: original b4 countdown + our (early) countdown per lot.
+// The frontend ticks these down locally every second between refreshes.
+app.get('/api/admin/lot-timers', adminAuth, async (req, res) => {
+  try {
+    const ids = String(req.query.lotIds || '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 200)
+    const config = await getPriceConfig()
+    const earlySec = Number(config.timerEarlyHours || 0) * 3600
+    const timers = {}
+    await Promise.all(ids.map(async (id) => {
+      const t = await fetchLotTimerInfo(id)
+      const orig = t.originalRemainingSec
+      timers[id] = { ...t, ourRemainingSec: orig === null ? null : Math.max(0, orig - earlySec) }
+    }))
+    res.json({ success: true, timerEarlyHours: config.timerEarlyHours, timers })
+  } catch (err) {
+    console.error('Error fetching admin lot timers:', err)
+    res.status(500).json({ message: 'Failed to fetch lot timers', error: err.message })
+  }
+})
 // Build a "view original" b4traders product URL. Verified: b4 routes by the
 // trailing lot id and ignores the slug, so any readable slug works.
 function buildSourceUrl(lotName, lotId) {
@@ -1198,6 +1344,7 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     }
 
     const orders = []
+    const allotments = await getAllotmentsForLots([...lotMap.keys()])
 
     for (const [lotId, bids] of lotMap.entries()) {
       bids.sort((a, b) => b.bidAmount - a.bidAmount || new Date(a.timestamp) - new Date(b.timestamp))
@@ -1214,6 +1361,7 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
         currentTopBid: topBid.bidAmount,
         winningUserEmail: topBid.userEmail,
         winningUserName: topBid.userName,
+        allotment: allotmentPublic(allotments[String(lotId)]) || null,
         bidders: bids.map(b => ({
           id: b.id,
           userEmail: b.userEmail,
@@ -1237,6 +1385,115 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin orders:', err)
     res.status(500).json({ message: 'Failed to fetch admin orders', error: err.message })
+  }
+})
+
+// Assign a lot to a bidder AFTER our website timer runs out. `mode: 'highest'`
+// assigns the current top bidder; `mode: 'custom'` assigns `bidderEmail`
+// (any bidder from the list, with their highest bid amount). Re-assigning
+// overwrites the previous allotment.
+app.post('/api/admin/orders/:lotId/assign', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId)
+    const { mode, bidderEmail } = req.body || {}
+
+    const allBids = await getAllBids()
+    const lotBids = allBids.filter((b) => String(b.lotId) === lotId)
+    if (lotBids.length === 0) {
+      return res.status(404).json({ message: 'No bids found for this lot' })
+    }
+
+    const { ourRemaining } = await ourRemainingSecFor(lotId)
+    if (ourRemaining !== null && ourRemaining > 0) {
+      return res.status(400).json({ message: 'Our website timer is still running for this lot. You can assign only after it runs out.' })
+    }
+
+    lotBids.sort((a, b) => b.bidAmount - a.bidAmount || new Date(a.timestamp) - new Date(b.timestamp))
+    let winner = null
+    let assignMode = 'highest'
+    if (mode === 'custom') {
+      const clean = String(bidderEmail || '').toLowerCase().trim()
+      if (!clean) {
+        return res.status(400).json({ message: 'bidderEmail is required for a custom assignment' })
+      }
+      const bidderBids = lotBids.filter((b) => b.userEmail === clean)
+      if (bidderBids.length === 0) {
+        return res.status(404).json({ message: 'That bidder has no bids on this lot' })
+      }
+      bidderBids.sort((a, b) => b.bidAmount - a.bidAmount || new Date(a.timestamp) - new Date(b.timestamp))
+      winner = bidderBids[0]
+      assignMode = 'custom'
+    } else {
+      winner = lotBids[0]
+    }
+
+    const allotment = await saveAllotment({
+      lotId,
+      email: winner.userEmail,
+      name: winner.userName,
+      amount: winner.bidAmount,
+      mode: assignMode,
+      by: req.adminUsername
+    })
+    await logAdminActivity(
+      req.adminUsername,
+      'assign_bid',
+      `Lot ${lotId} → ${allotment.allottedToEmail} at ₹${Number(allotment.allottedAmount).toLocaleString('en-IN')} (${assignMode})`,
+      'orders'
+    )
+    res.json({ success: true, allotment })
+  } catch (err) {
+    console.error('Error assigning bid:', err)
+    res.status(500).json({ message: 'Failed to assign bid', error: err.message })
+  }
+})
+
+// Per-lot allotment (public, for the bidder's own status view).
+app.get('/api/lots/:lotId/allotment', async (req, res) => {
+  try {
+    const allotment = await getAllotment(req.params.lotId)
+    res.json({ success: true, allotment })
+  } catch (err) {
+    console.error('Error fetching allotment:', err)
+    res.status(500).json({ message: 'Failed to fetch allotment', error: err.message })
+  }
+})
+
+// Per-user allotment summary (public, for My Account): for every lot the user
+// bid on, whether it was allotted and to whom. Also reports if our timer ended.
+app.get('/api/users/allotments', async (req, res) => {
+  try {
+    const email = String(req.query.email || '').toLowerCase().trim()
+    if (!email) {
+      return res.status(400).json({ message: 'Email query parameter is required' })
+    }
+    const allBids = await getAllBids()
+    const mine = allBids.filter((b) => b.userEmail === email)
+    const lotIds = [...new Set(mine.map((b) => String(b.lotId)))]
+    const allotments = await getAllotmentsForLots(lotIds)
+    const summary = await Promise.all(lotIds.map(async (lotId) => {
+      const lotBids = allBids.filter((b) => String(b.lotId) === lotId)
+      const top = lotBids.reduce((max, b) => (b.bidAmount > (max?.bidAmount || 0) ? b : max), null)
+      const userTop = mine.filter((b) => String(b.lotId) === lotId)
+        .reduce((max, b) => (b.bidAmount > (max?.bidAmount || 0) ? b : max), null)
+      const { ourRemaining, timer } = await ourRemainingSecFor(lotId)
+      const allotment = allotments[lotId] || null
+      return {
+        lotId,
+        lotName: top?.lotName || userTop?.lotName || '',
+        userHighestBid: userTop?.bidAmount || 0,
+        topBidAmount: top?.bidAmount || 0,
+        ourTimerEnded: ourRemaining !== null && ourRemaining <= 0,
+        timerReachable: timer.reachable !== false,
+        sourceEnded: !!timer.ended,
+        allotment,
+        allottedToMe: !!(allotment && allotment.allottedToEmail === email)
+      }
+    }))
+    res.json({ success: true, allotments: summary })
+  } catch (err) {
+    console.error('Error fetching user allotments:', err)
+    res.status(500).json({ message: 'Failed to fetch allotments', error: err.message })
   }
 })
 

@@ -639,6 +639,7 @@ function describeActivity(a) {
     case 'trader_approved': return `approved trader ${a.detail || ''}`.trim()
     case 'trader_rejected': return `rejected trader ${a.detail || ''}`.trim()
     case 'trader_pending': return `moved trader back to pending ${a.detail || ''}`.trim()
+    case 'assign_bid': return `assigned a bid (${a.detail || 'saved'})`
     default: return a.detail ? `${a.action} — ${a.detail}` : a.action
   }
 }
