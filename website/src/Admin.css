@@ -325,3 +325,65 @@
   font-size: 14px;
   color: #333;
 }
+
+/* Per-section activity feed */
+.section-activity {
+  margin-top: 18px;
+  border-top: 1px solid #e8edf3;
+  padding-top: 12px;
+}
+
+.section-activity-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.section-activity-head h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #5a6b82;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.section-activity-refresh {
+  border: 1px solid #c5cdd8;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #333;
+  padding: 2px 8px;
+}
+
+.section-activity-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #888;
+}
+
+.section-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.section-activity-list li {
+  font-size: 13px;
+  color: #333;
+  background: #f6f8fb;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.section-activity-time {
+  color: #888;
+}

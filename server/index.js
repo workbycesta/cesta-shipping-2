@@ -97,10 +97,11 @@ async function ensureSuperAdmin() {
   }
 }
 
-// MongoDB Schema for Admin activity log: who did what, and when.
+// MongoDB Schema for Admin activity log: who did what, in which section, and when.
 const adminActivitySchema = new mongoose.Schema({
   username: { type: String, required: true },
   action: { type: String, required: true },
+  section: { type: String, default: '' },
   detail: { type: String, default: '' },
   createdAt: { type: Date, default: Date.now }
 })
@@ -114,16 +115,18 @@ function activityPublic(a) {
     id: a._id ? a._id.toString() : a.id,
     username: a.username,
     action: a.action,
+    section: a.section || '',
     detail: a.detail || '',
     createdAt: a.createdAt
   }
 }
 
-async function logAdminActivity(username, action, detail = '') {
+async function logAdminActivity(username, action, detail = '', section = '') {
   const entry = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     username: String(username || 'unknown'),
     action: String(action || ''),
+    section: String(section || ''),
     detail: String(detail || ''),
     createdAt: new Date()
   }
@@ -131,7 +134,7 @@ async function logAdminActivity(username, action, detail = '') {
   if (memoryActivity.length > 1000) memoryActivity.splice(0, memoryActivity.length - 1000)
   if (isMongoConnected && AdminActivityModel) {
     try {
-      await AdminActivityModel.create({ username: entry.username, action: entry.action, detail: entry.detail, createdAt: entry.createdAt })
+      await AdminActivityModel.create({ username: entry.username, action: entry.action, section: entry.section, detail: entry.detail, createdAt: entry.createdAt })
     } catch (e) {
       console.error('Activity log DB save error (memory value kept):', e.message)
     }
@@ -139,17 +142,20 @@ async function logAdminActivity(username, action, detail = '') {
   return entry
 }
 
-async function getAdminActivity(limit = 100) {
+async function getAdminActivity(limit = 100, section = '') {
   const n = Math.min(Math.max(Number(limit) || 100, 1), 500)
+  const query = section ? { section: String(section) } : {}
   if (isMongoConnected && AdminActivityModel) {
     try {
-      const rows = await AdminActivityModel.find({}).sort({ createdAt: -1 }).limit(n).lean()
+      const rows = await AdminActivityModel.find(query).sort({ createdAt: -1 }).limit(n).lean()
       return rows.map(activityPublic)
     } catch (e) {
       console.error('Activity log DB query error, falling back to memory:', e)
     }
   }
-  return [...memoryActivity].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, n).map(activityPublic)
+  return [...memoryActivity]
+    .filter((a) => !section || a.section === section)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, n).map(activityPublic)
 }
 
 // Token auth for admin endpoints. Tokens are random, in-memory, and single-server;
@@ -437,16 +443,22 @@ app.get('/api/price-config', async (req, res) => {
   }
 })
 
-// Admin endpoint: update the global pricing config (default hike, range hikes, timer earliness)
+// Admin endpoint: update the global pricing config (default hike, range hikes, timer earliness).
+// Price-hike saves and timer saves log under their own section/action so each
+// admin-panel section shows only its own activity.
 app.post('/api/admin/price-config', adminAuth, async (req, res) => {
   try {
     const { priceHike, rangeHikes, timerEarlyHours } = req.body
     const saved = await savePriceConfig({ priceHike, rangeHikes, timerEarlyHours })
-    const changed = []
-    if (priceHike !== undefined) changed.push(`default hike → ${saved.priceHike}%`)
-    if (rangeHikes !== undefined) changed.push(`${saved.rangeHikes.length} custom range(s)`)
-    if (timerEarlyHours !== undefined) changed.push(`timer earliness → ${saved.timerEarlyHours}h`)
-    await logAdminActivity(req.adminUsername, 'update_price_config', changed.join(', ') || 'Saved price config')
+    if (priceHike !== undefined || rangeHikes !== undefined) {
+      const changed = []
+      if (priceHike !== undefined) changed.push(`default hike → ${saved.priceHike}%`)
+      if (rangeHikes !== undefined) changed.push(`${saved.rangeHikes.length} custom range(s)`)
+      await logAdminActivity(req.adminUsername, 'update_price_hike', changed.join(', '), 'price')
+    }
+    if (timerEarlyHours !== undefined) {
+      await logAdminActivity(req.adminUsername, 'update_timer_config', `timer earliness → ${saved.timerEarlyHours}h`, 'timer')
+    }
     res.json({ success: true, ...saved })
   } catch (err) {
     console.error('Error saving price config:', err)
@@ -539,7 +551,7 @@ app.post('/api/admin/login', async (req, res) => {
     }
     const token = crypto.randomBytes(32).toString('hex')
     adminTokens.set(token, admin.username)
-    await logAdminActivity(admin.username, 'login', 'Signed in to the admin panel')
+    await logAdminActivity(admin.username, 'login', 'Signed in to the admin panel', 'auth')
     res.json({ success: true, token, admin: adminPublic(admin) })
   } catch (err) {
     console.error('Admin login error:', err)
@@ -593,7 +605,7 @@ app.post('/api/admin/admins', adminAuth, async (req, res) => {
     } else {
       seedMemoryAdmins().push(doc)
     }
-    await logAdminActivity(req.adminUsername, 'create_admin', `Created admin account "${username}"`)
+    await logAdminActivity(req.adminUsername, 'create_admin', `Created admin account "${username}"`, 'admins')
     res.status(201).json({ success: true, admin: adminPublic(doc) })
   } catch (err) {
     console.error('Error creating admin:', err)
@@ -627,7 +639,7 @@ app.delete('/api/admin/admins/:username', adminAuth, async (req, res) => {
     for (const [tok, user] of adminTokens) {
       if (user === username) adminTokens.delete(tok)
     }
-    await logAdminActivity(req.adminUsername, 'remove_admin', `Removed admin account "${username}"`)
+    await logAdminActivity(req.adminUsername, 'remove_admin', `Removed admin account "${username}"`, 'admins')
     res.json({ success: true })
   } catch (err) {
     console.error('Error removing admin:', err)
@@ -636,9 +648,11 @@ app.delete('/api/admin/admins/:username', adminAuth, async (req, res) => {
 })
 
 // Recent admin activity (who did what, when). Any logged-in admin can view.
+// Optional ?section=price|timer|traders|admins|auth filters to one section;
+// without it, everything is returned (used by no one yet, kept for debugging).
 app.get('/api/admin/activity', adminAuth, async (req, res) => {
   try {
-    const activity = await getAdminActivity(req.query.limit)
+    const activity = await getAdminActivity(req.query.limit, req.query.section)
     res.json({ success: true, activity })
   } catch (err) {
     console.error('Error fetching activity:', err)
@@ -893,7 +907,7 @@ app.post('/api/admin/traders/:id/status', adminAuth, async (req, res) => {
     if (!updated) {
       return res.status(404).json({ message: 'Trader account not found' })
     }
-    await logAdminActivity(req.adminUsername, `trader_${status}`, `${updated.name || ''} (${updated.email || ''})`.trim())
+    await logAdminActivity(req.adminUsername, `trader_${status}`, `${updated.name || ''} (${updated.email || ''})`.trim(), 'traders')
     res.json({ success: true, trader: traderPublic(updated) })
   } catch (err) {
     console.error('Error updating trader status:', err)

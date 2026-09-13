@@ -110,6 +110,7 @@ function AdminTradersSection() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState(null)
   const [error, setError] = useState('')
+  const [activityKey, setActivityKey] = useState(0)
 
   const load = async () => {
     setLoading(true)
@@ -144,6 +145,7 @@ function AdminTradersSection() {
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update')
       await load()
+      setActivityKey((k) => k + 1)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -220,6 +222,7 @@ function AdminTradersSection() {
           ))}
         </div>
       )}
+      <SectionActivity section="traders" refreshKey={activityKey} />
     </div>
   )
 }
@@ -230,6 +233,7 @@ function RangePriceSection() {
   const [draft, setDraft] = useState([])
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
+  const [activityKey, setActivityKey] = useState(0)
 
   // Sync the local editor whenever the server config loads/changes
   useEffect(() => {
@@ -305,6 +309,7 @@ function RangePriceSection() {
     const result = await savePriceConfig({ priceHike: draftHike, rangeHikes: checked.ranges })
     setSaving(false)
     setStatus(result.ok ? '✅ Saved — live on the website for all devices.' : `❌ ${result.message}`)
+    if (result.ok) setActivityKey((k) => k + 1)
   }
 
   return (
@@ -402,6 +407,7 @@ function RangePriceSection() {
         </button>
         {status && <span className="range-status">{status}</span>}
       </div>
+      <SectionActivity section="price" refreshKey={activityKey} />
     </div>
   )
 }
@@ -411,6 +417,7 @@ function TimerConfigSection() {
   const [draftHours, setDraftHours] = useState('1')
   const [status, setStatus] = useState('')
   const [saving, setSaving] = useState(false)
+  const [activityKey, setActivityKey] = useState(0)
 
   // Sync the local editor whenever the server config loads/changes
   useEffect(() => {
@@ -424,6 +431,7 @@ function TimerConfigSection() {
     const result = await savePriceConfig({ timerEarlyHours: draftHours })
     setSaving(false)
     setStatus(result.ok ? '✅ Saved — live on the website for all devices.' : `❌ ${result.message}`)
+    if (result.ok) setActivityKey((k) => k + 1)
   }
 
   return (
@@ -461,6 +469,7 @@ function TimerConfigSection() {
         </button>
         {status && <span className="range-status">{status}</span>}
       </div>
+      <SectionActivity section="timer" refreshKey={activityKey} />
     </div>
   )
 }
@@ -475,6 +484,7 @@ function AdminAccountsSection() {
   const [newPassword, setNewPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [removing, setRemoving] = useState(null)
+  const [activityKey, setActivityKey] = useState(0)
 
   const isSuper = !!adminUser?.isSuperAdmin
 
@@ -515,6 +525,7 @@ function AdminAccountsSection() {
       setNewPassword('')
       setStatus(`✅ Admin "${data.admin.username}" created.`)
       await load()
+      setActivityKey((k) => k + 1)
     } catch (err) {
       setStatus(`❌ ${err.message}`)
     } finally {
@@ -536,6 +547,7 @@ function AdminAccountsSection() {
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to remove admin')
       setStatus(`✅ Admin "${username}" removed.`)
       await load()
+      setActivityKey((k) => k + 1)
     } catch (err) {
       setStatus(`❌ ${err.message}`)
     } finally {
@@ -611,6 +623,72 @@ function AdminAccountsSection() {
         </form>
       )}
       {status && <span className="range-status">{status}</span>}
+      <SectionActivity section="admins" refreshKey={activityKey} />
+    </div>
+  )
+}
+
+function describeActivity(a) {
+  switch (a.action) {
+    case 'login': return 'signed in'
+    case 'create_admin': return a.detail || 'created an admin account'
+    case 'remove_admin': return a.detail || 'removed an admin account'
+    case 'update_price_config': return `updated price config (${a.detail || 'saved'})`
+    case 'update_price_hike': return `updated price hikes (${a.detail || 'saved'})`
+    case 'update_timer_config': return `updated timer config (${a.detail || 'saved'})`
+    case 'trader_approved': return `approved trader ${a.detail || ''}`.trim()
+    case 'trader_rejected': return `rejected trader ${a.detail || ''}`.trim()
+    case 'trader_pending': return `moved trader back to pending ${a.detail || ''}`.trim()
+    default: return a.detail ? `${a.action} — ${a.detail}` : a.action
+  }
+}
+
+// Compact per-section activity feed: shows only this section's entries,
+// newest first, with who + when. Rendered inside each admin section.
+// `refreshKey` lets the parent force a reload (e.g. right after a save).
+function SectionActivity({ section, refreshKey = 0 }) {
+  const { adminHeaders, handleUnauthorized } = useAdmin()
+  const [activity, setActivity] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/activity?section=${encodeURIComponent(section)}&limit=10`, { headers: adminHeaders() })
+      handleUnauthorized(res)
+      const data = await res.json()
+      if (res.ok && data.success) setActivity(data.activity)
+    } catch {
+      // Activity is informational — never break the section over it.
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [section, refreshKey])
+
+  return (
+    <div className="section-activity">
+      <div className="section-activity-head">
+        <h4>Activity</h4>
+        <button type="button" className="section-activity-refresh" onClick={load} aria-label="Refresh activity">⟳</button>
+      </div>
+      {loading ? (
+        <p className="section-activity-empty">Loading…</p>
+      ) : activity.length === 0 ? (
+        <p className="section-activity-empty">No activity yet — changes made here will appear with who did them and when.</p>
+      ) : (
+        <ul className="section-activity-list">
+          {activity.map((a) => (
+            <li key={a.id}>
+              <strong>{a.username}</strong> {describeActivity(a)}
+              <span className="section-activity-time"> · {a.createdAt ? new Date(a.createdAt).toLocaleString() : '—'}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -641,24 +719,14 @@ function RecentActivitySection() {
     load()
   }, [])
 
-  const describe = (a) => {
-    switch (a.action) {
-      case 'login': return 'signed in'
-      case 'create_admin': return a.detail || 'created an admin account'
-      case 'remove_admin': return a.detail || 'removed an admin account'
-      case 'update_price_config': return `updated price config (${a.detail || 'saved'})`
-      case 'trader_approved': return `approved trader ${a.detail || ''}`.trim()
-      case 'trader_rejected': return `rejected trader ${a.detail || ''}`.trim()
-      case 'trader_pending': return `moved trader back to pending ${a.detail || ''}`.trim()
-      default: return a.detail ? `${a.action} — ${a.detail}` : a.action
-    }
-  }
+  const describe = (a) => describeActivity(a)
 
   return (
     <div className="admin-section">
       <h2>Recent Activity</h2>
       <p className="admin-desc">
-        Who did what in the admin panel, and when. Newest first.
+        Everything done in the admin panel, newest first — each section above also
+        shows only its own activity beside it.
       </p>
 
       <div className="trader-tabs">
