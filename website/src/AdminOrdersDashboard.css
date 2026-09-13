@@ -335,6 +335,106 @@
   margin-bottom: 24px;
 }
 
+.sourcing-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.sourcing-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.btn-view-original {
+  background: #0284c7;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.btn-view-original:hover {
+  background: #0369a1;
+}
+
+.sourcing-lot-caption {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.sourcing-loading, .sourcing-note {
+  font-size: 13px;
+  color: #64748b;
+  padding: 8px 0;
+}
+
+.sourcing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.sourcing-tile {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sourcing-tile strong {
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.sourcing-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.sourcing-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.sourcing-tile.profit-pos {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.sourcing-tile.profit-pos strong {
+  color: #15803d;
+}
+
+.sourcing-tile.profit-neg {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.sourcing-tile.profit-neg strong {
+  color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+  .sourcing-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 .winning-trophy {
   font-size: 32px;
 }

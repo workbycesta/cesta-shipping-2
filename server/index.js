@@ -953,22 +953,43 @@ app.post('/api/auth/login', async (req, res) => {
   }
 })
 
-// Fetch the authoritative raw floor price for a lot directly from b4traders,
-// so the enforced minimum never depends on what the client sends.
-async function fetchRawLotFloorPrice(lotId) {
+// Fetch the full live source summary for a lot directly from b4traders.
+// Returns { summary } on success, { ended: true } when the listing is gone,
+// or null when b4 is unreachable. Results are cached briefly per lot.
+const sourcingCache = new Map() // lotId -> { at, data }
+const SOURCING_CACHE_TTL_MS = 60 * 1000
+
+async function fetchLotSourceInfo(lotId) {
+  const cached = sourcingCache.get(String(lotId))
+  if (cached && Date.now() - cached.at < SOURCING_CACHE_TTL_MS) return cached.data
+  let data = null
   try {
     const lotDetailsRes = await fetch(`https://www.b4traders.com/api/lot_publishes/${lotId}/lot_details`, {
       headers: { 'Accept': 'application/json, text/plain, */*' }
     })
-    if (!lotDetailsRes.ok) return null
-    const data = await lotDetailsRes.json()
-    const summary = data?.lot_publishes?.[0] || data?.lot_publishes || data
-    const raw = Number(summary?.floor_price)
-    return Number.isFinite(raw) && raw > 0 ? raw : null
+    if (!lotDetailsRes.ok) {
+      data = lotDetailsRes.status === 404 ? { ended: true } : null
+    } else {
+      const body = await lotDetailsRes.json()
+      const summary = body?.lot_summary || body?.lot_publishes?.[0] || body?.lot_publishes || null
+      data = summary ? { summary } : null
+    }
   } catch (err) {
-    console.error('Error fetching raw lot floor price:', err.message)
-    return null
+    console.error('Error fetching lot source info:', err.message)
+    data = null
   }
+  if (data) sourcingCache.set(String(lotId), { at: Date.now(), data })
+  return data
+}
+
+// Build a "view original" b4traders product URL. Verified: b4 routes by the
+// trailing lot id and ignores the slug, so any readable slug works.
+function buildSourceUrl(lotName, lotId) {
+  const slug = String(lotName || 'lot')
+    .replace(/[^A-Za-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 120) || 'lot'
+  return `https://www.b4traders.com/product_detail/${slug}/${lotId}`
 }
 
 // Submit a Bid
@@ -995,7 +1016,9 @@ app.post('/api/bids', async (req, res) => {
     // Hiked floor is rounded up to the next ₹1,000 first, then +1000 (matches frontend).
     // Raw floor price comes from b4traders (client value only as fallback), then the
     // admin-configured default/range hike is applied before comparing with the bid.
-    const rawFloor = (await fetchRawLotFloorPrice(lotId)) ?? Number(floorPrice || 0)
+    const sourceInfo = await fetchLotSourceInfo(lotId)
+    const sourceFloor = Number(sourceInfo?.summary?.floor_price)
+    const rawFloor = Number.isFinite(sourceFloor) && sourceFloor > 0 ? sourceFloor : Number(floorPrice || 0)
     const config = await getPriceConfig()
     const hikedFloor = applyPriceHikeToNumber(rawFloor, config.priceHike, config.rangeHikes)
     const minBid = hikedFloor > 0 ? Math.ceil(hikedFloor / 1000) * 1000 + 1000 : 0
@@ -1214,6 +1237,65 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
   } catch (err) {
     console.error('Error fetching admin orders:', err)
     res.status(500).json({ message: 'Failed to fetch admin orders', error: err.message })
+  }
+})
+
+// Admin sourcing intel for one lot: live b4traders numbers plus what we should
+// bid there and the expected profit vs our users' top bid. Read-only guidance.
+app.get('/api/admin/sourcing/:lotId', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId)
+
+    const allBids = await getAllBids()
+    const lotBids = allBids.filter(b => String(b.lotId) === lotId)
+    const ourTopBid = lotBids.reduce((max, b) => (b.bidAmount > max ? b.bidAmount : max), 0)
+    const ourLotName = lotBids.length > 0 ? lotBids[0].lotName : ''
+
+    const info = await fetchLotSourceInfo(lotId)
+    if (!info) {
+      return res.json({ success: false, lotId, sourceUrl: buildSourceUrl(ourLotName, lotId), reason: 'SOURCE_UNREACHABLE' })
+    }
+    if (info.ended) {
+      return res.json({ success: false, lotId, sourceUrl: buildSourceUrl(ourLotName, lotId), reason: 'SOURCE_ENDED' })
+    }
+
+    const summary = info.summary
+    const rawFloor = Number(summary?.floor_price) || 0
+    const sourceLiveBid = Number(summary?.bid_amount) || 0
+    const buyNowPrice = Number(summary?.buy_now_price) || 0
+    const lotName = summary?.lot_name || ourLotName
+
+    const config = await getPriceConfig()
+    const appliedHikePercent = hikePercentFor(rawFloor, config.priceHike, config.rangeHikes)
+    const hikedFloor = applyPriceHikeToNumber(rawFloor, config.priceHike, config.rangeHikes)
+
+    const floorBase = rawFloor > 0 ? rawFloor : 0
+    const liveBase = sourceLiveBid > 0 ? sourceLiveBid + 1000 : 0
+    const suggestedSourceBid = Math.max(floorBase, liveBase)
+    const expectedProfit = ourTopBid > 0 && suggestedSourceBid > 0 ? ourTopBid - suggestedSourceBid : 0
+
+    res.json({
+      success: true,
+      lotId,
+      sourceUrl: buildSourceUrl(lotName, lotId),
+      lotName,
+      lotNumber: summary?.lot_number || '',
+      status: summary?.status || '',
+      endDate: summary?.end_date || '',
+      rawFloorPrice: rawFloor,
+      sourceMrp: Number(summary?.mrp) || 0,
+      sourceLiveBid: sourceLiveBid || null,
+      buyNowPrice: buyNowPrice || null,
+      ourTopBid,
+      hikedFloor,
+      appliedHikePercent,
+      suggestedSourceBid,
+      expectedProfit,
+      fetchedAt: new Date().toISOString()
+    })
+  } catch (err) {
+    console.error('Error fetching admin sourcing:', err)
+    res.status(500).json({ message: 'Failed to fetch sourcing info', error: err.message })
   }
 })
 

@@ -16,6 +16,10 @@ export default function AdminOrdersDashboard() {
   const [selectedLotId, setSelectedLotId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
 
+  const [sourcing, setSourcing] = useState(null)
+  const [sourcingLoading, setSourcingLoading] = useState(false)
+  const [sourcingError, setSourcingError] = useState('')
+
   const fetchOrders = async () => {
     setLoading(true)
     setError('')
@@ -38,6 +42,35 @@ export default function AdminOrdersDashboard() {
   useEffect(() => {
     fetchOrders()
   }, [])
+
+  useEffect(() => {
+    const lotId = selectedLotId
+    if (!lotId) {
+      setSourcing(null)
+      return
+    }
+    let cancelled = false
+    const fetchSourcing = async () => {
+      setSourcingLoading(true)
+      setSourcingError('')
+      try {
+        const res = await fetch(`/api/admin/sourcing/${lotId}`, { headers: adminHeaders() })
+        handleUnauthorized(res)
+        if (!res.ok) throw new Error('Failed to fetch sourcing info')
+        const data = await res.json()
+        if (!cancelled) setSourcing(data)
+      } catch (err) {
+        if (!cancelled) {
+          setSourcing(null)
+          setSourcingError(err.message)
+        }
+      } finally {
+        if (!cancelled) setSourcingLoading(false)
+      }
+    }
+    fetchSourcing()
+    return () => { cancelled = true }
+  }, [selectedLotId])
 
   if (!isAuthenticated) {
     return (
@@ -176,6 +209,61 @@ export default function AdminOrdersDashboard() {
                         <span>MRP: <strong>{formatRawMoney(selectedOrder.mrp)}</strong></span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="sourcing-box">
+                    <div className="sourcing-link-row">
+                      {sourcing?.sourceUrl || selectedOrder.lotId ? (
+                        <a
+                          href={sourcing?.sourceUrl || `https://www.b4traders.com/product_detail/lot/${selectedOrder.lotId}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-view-original"
+                        >
+                          🔗 View Original on b4traders.com
+                        </a>
+                      ) : null}
+                      <span className="sourcing-lot-caption">Lot #{selectedOrder.lotId}</span>
+                    </div>
+
+                    {sourcingLoading && <div className="sourcing-loading">Fetching live source price…</div>}
+
+                    {!sourcingLoading && (sourcingError || (sourcing && !sourcing.success)) && (
+                      <div className="sourcing-note">
+                        {sourcing?.reason === 'SOURCE_ENDED'
+                          ? 'Original listing ended or was removed on b4traders.'
+                          : 'Live source price unavailable. Open the original link to check manually.'}
+                      </div>
+                    )}
+
+                    {!sourcingLoading && sourcing?.success && (
+                      <div className="sourcing-grid">
+                        <div className="sourcing-tile">
+                          <span className="sourcing-label">Collect from winner</span>
+                          <strong>{formatRawMoney(sourcing.ourTopBid)}</strong>
+                          <span className="sourcing-sub">{selectedOrder.winningUserEmail}</span>
+                        </div>
+                        <div className="sourcing-tile">
+                          <span className="sourcing-label">Raw b4 floor (live)</span>
+                          <strong>{formatRawMoney(sourcing.rawFloorPrice)}</strong>
+                          <span className="sourcing-sub">Hike applied: {sourcing.appliedHikePercent}%</span>
+                        </div>
+                        <div className="sourcing-tile">
+                          <span className="sourcing-label">Suggested bid on b4</span>
+                          <strong>{formatRawMoney(sourcing.suggestedSourceBid)}</strong>
+                          <span className="sourcing-sub">
+                            {sourcing.sourceLiveBid ? `Live b4 bid: ${formatRawMoney(sourcing.sourceLiveBid)}` : 'No live b4 bid yet'}
+                          </span>
+                        </div>
+                        <div className={`sourcing-tile ${sourcing.expectedProfit < 0 ? 'profit-neg' : 'profit-pos'}`}>
+                          <span className="sourcing-label">Expected profit</span>
+                          <strong>{formatRawMoney(sourcing.expectedProfit)}</strong>
+                          <span className="sourcing-sub">
+                            {sourcing.expectedProfit < 0 ? '⚠ Loss — do not bid at this level' : 'Top bid minus suggested bid'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="winning-banner">
