@@ -349,7 +349,7 @@ function applyPriceHikeToNumber(price, priceHike = 0, rangeHikes = []) {
   if (isNaN(numPrice) || numPrice <= 0) return price
   const percent = hikePercentFor(numPrice, priceHike, rangeHikes)
   const hiked = percent > 0 ? numPrice * (1 + percent / 100) : numPrice
-  return Math.round(hiked)
+  return ceilTo1000(hiked)
 }
 
 // Scale exact (unrounded) hiked row values so they sum to EXACTLY `target`
@@ -1449,6 +1449,18 @@ app.post('/api/admin/orders/:lotId/assign', adminAuth, async (req, res) => {
 })
 
 // Per-lot allotment (public, for the bidder's own status view).
+// Canonical path is /api/allotments/:lotId — the legacy /api/lots/:lotId/allotment
+// alias is kept for compatibility (note: /api/lots* is proxied to b4traders in
+// vite.config.js and vercel.json, so browsers must use the canonical path).
+app.get('/api/allotments/:lotId', async (req, res) => {
+  try {
+    const allotment = await getAllotment(req.params.lotId)
+    res.json({ success: true, allotment })
+  } catch (err) {
+    console.error('Error fetching allotment:', err)
+    res.status(500).json({ message: 'Failed to fetch allotment', error: err.message })
+  }
+})
 app.get('/api/lots/:lotId/allotment', async (req, res) => {
   try {
     const allotment = await getAllotment(req.params.lotId)

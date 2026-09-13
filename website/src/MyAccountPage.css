@@ -226,6 +226,11 @@
   color: #15803d;
 }
 
+.badge-allotted {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .badge-losing {
   background: #fee2e2;
   color: #b91c1c;

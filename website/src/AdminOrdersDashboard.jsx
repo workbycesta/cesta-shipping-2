@@ -43,7 +43,7 @@ function DualTimer({ timer, earlyHours }) {
 
 export default function AdminOrdersDashboard() {
   const { isAuthenticated, logout, adminHeaders, handleUnauthorized } = useAdmin()
-  const { formatMoney, formatRawMoney, timerOffsetSeconds } = usePrice()
+  const { formatRawMoney, timerOffsetSeconds } = usePrice()
   const earlyHours = Number.isFinite(timerOffsetSeconds) ? timerOffsetSeconds / 3600 : 1
   const navigate = useNavigate()
 
@@ -263,7 +263,7 @@ export default function AdminOrdersDashboard() {
           </div>
           <div className="kpi-card highlight-kpi">
             <span className="kpi-title">Total Top Bid Volume</span>
-            <strong className="kpi-value">{formatMoney(totalVolume)}</strong>
+            <strong className="kpi-value">{formatRawMoney(totalVolume)}</strong>
           </div>
         </div>
 
@@ -366,7 +366,7 @@ export default function AdminOrdersDashboard() {
                         )}
                       </div>
                       <div className="detail-specs-row">
-                        <span>Floor Price: <strong>{formatMoney(selectedOrder.floorPrice)}</strong></span>
+                        <span>Floor Price: <strong>{formatRawMoney(Math.ceil(Number(selectedOrder.floorPrice) / 1000 - 1e-9) * 1000)}</strong></span>
                         <span>MRP: <strong>{formatRawMoney(selectedOrder.mrp)}</strong></span>
                       </div>
                     </div>
@@ -408,20 +408,6 @@ export default function AdminOrdersDashboard() {
                           <span className="sourcing-label">Raw b4 floor (live)</span>
                           <strong>{formatRawMoney(sourcing.rawFloorPrice)}</strong>
                           <span className="sourcing-sub">Hike applied: {sourcing.appliedHikePercent}%</span>
-                        </div>
-                        <div className="sourcing-tile">
-                          <span className="sourcing-label">Suggested bid on b4</span>
-                          <strong>{formatRawMoney(sourcing.suggestedSourceBid)}</strong>
-                          <span className="sourcing-sub">
-                            {sourcing.sourceLiveBid ? `Live b4 bid: ${formatRawMoney(sourcing.sourceLiveBid)}` : 'No live b4 bid yet'}
-                          </span>
-                        </div>
-                        <div className={`sourcing-tile ${sourcing.expectedProfit < 0 ? 'profit-neg' : 'profit-pos'}`}>
-                          <span className="sourcing-label">Expected profit</span>
-                          <strong>{formatRawMoney(sourcing.expectedProfit)}</strong>
-                          <span className="sourcing-sub">
-                            {sourcing.expectedProfit < 0 ? '⚠ Loss — do not bid at this level' : 'Top bid minus suggested bid'}
-                          </span>
                         </div>
                       </div>
                     )}

@@ -63,7 +63,7 @@ export default function ProductDetailPage() {
     let cancelled = false
     const fetchAllotment = async () => {
       try {
-        const res = await fetch(`/api/lots/${lotId}/allotment`)
+        const res = await fetch(`/api/allotments/${lotId}`)
         if (!res.ok) return
         const data = await res.json()
         if (!cancelled) setAllotInfo(data.allotment || null)

@@ -25,6 +25,14 @@ export default defineConfig({
         target: 'http://localhost:2000',
         changeOrigin: true,
       },
+      '/api/users': {
+        target: 'http://localhost:2000',
+        changeOrigin: true,
+      },
+      '/api/allotments': {
+        target: 'http://localhost:2000',
+        changeOrigin: true,
+      },
       '/api/lots': {
         target: 'https://www.b4traders.com',
         changeOrigin: true,

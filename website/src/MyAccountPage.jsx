@@ -132,6 +132,7 @@ export default function MyAccountPage() {
 
   const winningCount = bids.filter((b) => b.status === 'Winning').length
   const losingCount = bids.filter((b) => b.status === 'Losing').length
+  const allottedToMeCount = Object.values(allotments).filter((a) => a?.allottedToMe).length
 
   return (
     <div className="account-page">
@@ -157,6 +158,12 @@ export default function MyAccountPage() {
               <span className="stat-num">{losingCount}</span>
               <span className="stat-label">Outbid / Losing</span>
             </div>
+            {allottedToMeCount > 0 && (
+              <div className="stat-card winning-stat">
+                <span className="stat-num">{allottedToMeCount}</span>
+                <span className="stat-label">Allotted To You</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -190,10 +197,12 @@ export default function MyAccountPage() {
                 const allottedToMe = !!info?.allottedToMe
                 const timerDone = !!info?.ourTimerEnded
                 return (
-                  <div key={bid.lotId} className={`bid-card ${isWinning ? 'card-winning' : 'card-losing'}`}>
+                  <div key={bid.lotId} className={`bid-card ${allotted ? (allottedToMe ? 'card-winning' : 'card-losing') : (isWinning ? 'card-winning' : 'card-losing')}`}>
                     <div className="bid-card-header">
-                      <span className={`status-badge ${isWinning ? 'badge-winning' : 'badge-losing'}`}>
-                        {isWinning ? '🟢 WINNING' : '🔴 OUTBID / LOSING'}
+                      <span className={`status-badge ${allotted ? (allottedToMe ? 'badge-allotted' : 'badge-losing') : (isWinning ? 'badge-winning' : 'badge-losing')}`}>
+                        {allotted
+                          ? (allottedToMe ? '🎉 ALLOTTED TO YOU' : '📌 ALLOTTED TO OTHER')
+                          : (isWinning ? '🟢 WINNING' : '🔴 OUTBID / LOSING')}
                       </span>
                       <span className="bid-time-ago">
                         Last Bid: {new Date(bid.lastBidTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -245,7 +254,9 @@ export default function MyAccountPage() {
 
                     <div className="bid-card-footer">
                       <Link to={`/product_detail/${bid.lotId}`} className="btn-view-product">
-                        {isWinning ? 'View Lot Details →' : '⚡ Increase Bid Now →'}
+                        {allotted
+                          ? (allottedToMe ? 'View Allotted Lot →' : 'View Lot Details →')
+                          : (isWinning ? 'View Lot Details →' : '⚡ Increase Bid Now →')}
                       </Link>
                     </div>
                   </div>
