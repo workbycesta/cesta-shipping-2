@@ -18,7 +18,16 @@ const sanitizeTimerEarlyHours = (value) => {
 
 export function AdminProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('admin_auth') === 'true'
+    return sessionStorage.getItem('admin_token') ? true : false
+  })
+  // Logged-in admin identity: { username, isSuperAdmin }
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem('admin_user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
   })
   // Price hike is stored ON THE SERVER (DB), not in localStorage,
   // so every device sees the same pricing config.
@@ -57,18 +66,48 @@ export function AdminProvider({ children }) {
     return () => { cancelled = true }
   }, [])
 
-  const login = (username, password) => {
-    if (username === 'gopi' && password === 'gopi12') {
+  const login = async (username, password) => {
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.success) return false
+      sessionStorage.setItem('admin_token', data.token)
+      sessionStorage.setItem('admin_user', JSON.stringify(data.admin))
       setIsAuthenticated(true)
-      sessionStorage.setItem('admin_auth', 'true')
+      setAdminUser(data.admin)
       return true
+    } catch {
+      return false
     }
-    return false
   }
 
   const logout = () => {
+    const token = sessionStorage.getItem('admin_token')
+    if (token) {
+      fetch('/api/admin/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {})
+    }
     setIsAuthenticated(false)
+    setAdminUser(null)
+    sessionStorage.removeItem('admin_token')
+    sessionStorage.removeItem('admin_user')
     sessionStorage.removeItem('admin_auth')
+  }
+
+  // Auth header for admin API calls; also forces logout on 401 (e.g. removed admin).
+  const adminHeaders = (extra = {}) => {
+    const token = sessionStorage.getItem('admin_token')
+    return token ? { ...extra, Authorization: `Bearer ${token}` } : { ...extra }
+  }
+
+  const handleUnauthorized = (res) => {
+    if (res.status === 401) logout()
   }
 
   // Set the local default hike value in the editor (NOT saved — admin presses Save)
@@ -86,9 +125,10 @@ export function AdminProvider({ children }) {
     try {
       const res = await fetch('/api/admin/price-config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body)
       })
+      handleUnauthorized(res)
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) {
         console.error('Failed to save price config:', data.message || res.statusText)
@@ -130,8 +170,11 @@ export function AdminProvider({ children }) {
   return (
     <AdminContext.Provider value={{
       isAuthenticated,
+      adminUser,
       login,
       logout,
+      adminHeaders,
+      handleUnauthorized,
       priceHike,
       updatePriceHike,
       savePriceConfig,

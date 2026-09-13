@@ -5,7 +5,7 @@ import { usePrice } from './usePrice'
 import './AdminOrdersDashboard.css'
 
 export default function AdminOrdersDashboard() {
-  const { isAuthenticated, logout } = useAdmin()
+  const { isAuthenticated, logout, adminHeaders, handleUnauthorized } = useAdmin()
   const { formatMoney, formatRawMoney } = usePrice()
   const navigate = useNavigate()
 
@@ -20,7 +20,8 @@ export default function AdminOrdersDashboard() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/orders')
+      const res = await fetch('/api/admin/orders', { headers: adminHeaders() })
+      handleUnauthorized(res)
       if (!res.ok) throw new Error('Failed to fetch orders data')
       const data = await res.json()
       setOrdersData(data)

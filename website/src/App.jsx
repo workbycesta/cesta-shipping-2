@@ -59,10 +59,10 @@ function AdminLogin() {
   const { login } = useAdmin()
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    const success = login(username, password)
+    const success = await login(username, password)
     if (success) {
       navigate('/admin')
     } else {
@@ -103,6 +103,7 @@ function AdminLogin() {
 }
 
 function AdminTradersSection() {
+  const { adminHeaders, handleUnauthorized } = useAdmin()
   const [traders, setTraders] = useState([])
   const [counts, setCounts] = useState(null)
   const [tab, setTab] = useState('pending')
@@ -114,7 +115,8 @@ function AdminTradersSection() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/traders')
+      const res = await fetch('/api/admin/traders', { headers: adminHeaders() })
+      handleUnauthorized(res)
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load accounts')
       setTraders(data.traders)
@@ -135,9 +137,10 @@ function AdminTradersSection() {
     try {
       const res = await fetch(`/api/admin/traders/${id}/status`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status })
       })
+      handleUnauthorized(res)
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.message || 'Failed to update')
       await load()
@@ -462,8 +465,230 @@ function TimerConfigSection() {
   )
 }
 
+function AdminAccountsSection() {
+  const { adminUser, adminHeaders, handleUnauthorized } = useAdmin()
+  const [admins, setAdmins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [status, setStatus] = useState('')
+  const [newUsername, setNewUsername] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [removing, setRemoving] = useState(null)
+
+  const isSuper = !!adminUser?.isSuperAdmin
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/admins', { headers: adminHeaders() })
+      handleUnauthorized(res)
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load admins')
+      setAdmins(data.admins)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const create = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    setStatus('')
+    try {
+      const res = await fetch('/api/admin/admins', {
+        method: 'POST',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ username: newUsername, password: newPassword })
+      })
+      handleUnauthorized(res)
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to create admin')
+      setNewUsername('')
+      setNewPassword('')
+      setStatus(`✅ Admin "${data.admin.username}" created.`)
+      await load()
+    } catch (err) {
+      setStatus(`❌ ${err.message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async (username) => {
+    if (!window.confirm(`Remove admin "${username}"? They will be signed out immediately.`)) return
+    setRemoving(username)
+    setStatus('')
+    try {
+      const res = await fetch(`/api/admin/admins/${encodeURIComponent(username)}`, {
+        method: 'DELETE',
+        headers: adminHeaders()
+      })
+      handleUnauthorized(res)
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to remove admin')
+      setStatus(`✅ Admin "${username}" removed.`)
+      await load()
+    } catch (err) {
+      setStatus(`❌ ${err.message}`)
+    } finally {
+      setRemoving(null)
+    }
+  }
+
+  return (
+    <div className="admin-section">
+      <h2>Admin Accounts</h2>
+      <p className="admin-desc">
+        Everyone listed here has full admin access. Only the super admin (gopi) can create
+        or remove admin accounts.
+      </p>
+
+      {error && <div className="admin-error">{error}</div>}
+      {loading ? (
+        <div className="admin-desc">Loading accounts…</div>
+      ) : (
+        <div className="trader-list">
+          {admins.map((a) => (
+            <div key={a.username} className="trader-card">
+              <div className="trader-info">
+                <div className="trader-name">
+                  {a.username}
+                  {a.isSuperAdmin ? <span className="trader-org"> — super admin</span> : null}
+                  {adminUser?.username === a.username ? <span className="trader-org"> (you)</span> : null}
+                </div>
+                <div className="trader-meta">
+                  Added by {a.createdBy || 'system'} · 🗓 {a.createdAt ? new Date(a.createdAt).toLocaleString() : '—'}
+                </div>
+              </div>
+              <div className="trader-actions">
+                {isSuper && !a.isSuperAdmin && adminUser?.username !== a.username && (
+                  <button
+                    type="button"
+                    className="admin-reject-btn"
+                    disabled={removing === a.username}
+                    onClick={() => remove(a.username)}
+                  >
+                    {removing === a.username ? 'Removing…' : '✕ Remove'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isSuper && (
+        <form className="hike-add-row" style={{ marginTop: '16px' }} onSubmit={create}>
+          <div className="hike-row" style={{ gridTemplateColumns: '1fr 1fr auto' }}>
+            <input
+              type="text"
+              placeholder="New username"
+              aria-label="New admin username"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              required
+            />
+            <input
+              type="text"
+              placeholder="Password (min 4 chars)"
+              aria-label="New admin password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+            />
+            <button type="submit" className="hike-add-btn" disabled={busy}>
+              {busy ? 'Adding…' : '+ Add Admin'}
+            </button>
+          </div>
+        </form>
+      )}
+      {status && <span className="range-status">{status}</span>}
+    </div>
+  )
+}
+
+function RecentActivitySection() {
+  const { adminHeaders, handleUnauthorized } = useAdmin()
+  const [activity, setActivity] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/admin/activity?limit=100', { headers: adminHeaders() })
+      handleUnauthorized(res)
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.message || 'Failed to load activity')
+      setActivity(data.activity)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const describe = (a) => {
+    switch (a.action) {
+      case 'login': return 'signed in'
+      case 'create_admin': return a.detail || 'created an admin account'
+      case 'remove_admin': return a.detail || 'removed an admin account'
+      case 'update_price_config': return `updated price config (${a.detail || 'saved'})`
+      case 'trader_approved': return `approved trader ${a.detail || ''}`.trim()
+      case 'trader_rejected': return `rejected trader ${a.detail || ''}`.trim()
+      case 'trader_pending': return `moved trader back to pending ${a.detail || ''}`.trim()
+      default: return a.detail ? `${a.action} — ${a.detail}` : a.action
+    }
+  }
+
+  return (
+    <div className="admin-section">
+      <h2>Recent Activity</h2>
+      <p className="admin-desc">
+        Who did what in the admin panel, and when. Newest first.
+      </p>
+
+      <div className="trader-tabs">
+        <button type="button" className="trader-tab refresh" onClick={load}>⟳ Refresh</button>
+      </div>
+
+      {error && <div className="admin-error">{error}</div>}
+      {loading ? (
+        <div className="admin-desc">Loading activity…</div>
+      ) : activity.length === 0 ? (
+        <div className="admin-desc">No activity yet.</div>
+      ) : (
+        <div className="trader-list">
+          {activity.map((a) => (
+            <div key={a.id} className="trader-card">
+              <div className="trader-info">
+                <div className="trader-name">{a.username}</div>
+                <div className="trader-meta">{describe(a)}</div>
+                <div className="trader-meta">🗓 {a.createdAt ? new Date(a.createdAt).toLocaleString() : '—'}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AdminPanel() {
-  const { logout } = useAdmin()
+  const { logout, adminUser } = useAdmin()
   const navigate = useNavigate()
 
   return (
@@ -471,6 +696,11 @@ function AdminPanel() {
       <div className="admin-header">
         <h1>Admin Panel</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {adminUser?.username && (
+            <span className="admin-desc" style={{ margin: 0 }}>
+              👤 {adminUser.username}{adminUser.isSuperAdmin ? ' (super admin)' : ''}
+            </span>
+          )}
           <button
             type="button"
             className="admin-login-btn"
@@ -486,6 +716,10 @@ function AdminPanel() {
       <TimerConfigSection />
 
       <AdminTradersSection />
+
+      <AdminAccountsSection />
+
+      <RecentActivitySection />
     </div>
   )
 }

@@ -34,6 +34,144 @@ let TraderModel = null
 // In-memory fallback for traders (used only when MongoDB is unavailable)
 const memoryTraders = []
 
+// MongoDB Schema for Admin users. 'gopi' is the super admin (seeded on first
+// run); he can create more admins, but those cannot create further admins.
+// Passwords are plain text by design (internal project, same as traders).
+const adminUserSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  isSuperAdmin: { type: Boolean, default: false },
+  createdBy: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
+})
+
+const SUPER_ADMIN_USERNAME = 'gopi'
+const SUPER_ADMIN_PASSWORD = 'gopi12'
+
+let AdminUserModel = null
+// In-memory fallback for admin users (used only when MongoDB is unavailable)
+let memoryAdmins = null // lazy-seeded so the super admin always exists
+
+function seedMemoryAdmins() {
+  if (!memoryAdmins) {
+    memoryAdmins = [{ username: SUPER_ADMIN_USERNAME, password: SUPER_ADMIN_PASSWORD, isSuperAdmin: true, createdBy: 'system', createdAt: new Date() }]
+  }
+  return memoryAdmins
+}
+
+function adminPublic(a) {
+  return {
+    username: a.username,
+    isSuperAdmin: !!a.isSuperAdmin,
+    createdBy: a.createdBy || '',
+    createdAt: a.createdAt
+  }
+}
+
+async function findAdminByUsername(username) {
+  const clean = String(username || '').toLowerCase().trim()
+  if (!clean) return null
+  if (isMongoConnected && AdminUserModel) {
+    try {
+      return await AdminUserModel.findOne({ username: clean }).lean()
+    } catch (e) {
+      console.error('Admin DB query error, falling back to memory:', e)
+    }
+  }
+  return seedMemoryAdmins().find((a) => a.username === clean) || null
+}
+
+// Ensure the super admin exists in MongoDB (plain gopi/gopi12, seeded once).
+async function ensureSuperAdmin() {
+  seedMemoryAdmins()
+  if (isMongoConnected && AdminUserModel) {
+    try {
+      const existing = await AdminUserModel.findOne({ username: SUPER_ADMIN_USERNAME }).lean()
+      if (!existing) {
+        await AdminUserModel.create({ username: SUPER_ADMIN_USERNAME, password: SUPER_ADMIN_PASSWORD, isSuperAdmin: true, createdBy: 'system' })
+        console.log('Super admin seeded')
+      }
+    } catch (e) {
+      console.error('Super admin seed error:', e.message)
+    }
+  }
+}
+
+// MongoDB Schema for Admin activity log: who did what, and when.
+const adminActivitySchema = new mongoose.Schema({
+  username: { type: String, required: true },
+  action: { type: String, required: true },
+  detail: { type: String, default: '' },
+  createdAt: { type: Date, default: Date.now }
+})
+
+let AdminActivityModel = null
+// In-memory fallback for activity log (used only when MongoDB is unavailable)
+const memoryActivity = []
+
+function activityPublic(a) {
+  return {
+    id: a._id ? a._id.toString() : a.id,
+    username: a.username,
+    action: a.action,
+    detail: a.detail || '',
+    createdAt: a.createdAt
+  }
+}
+
+async function logAdminActivity(username, action, detail = '') {
+  const entry = {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    username: String(username || 'unknown'),
+    action: String(action || ''),
+    detail: String(detail || ''),
+    createdAt: new Date()
+  }
+  memoryActivity.push(entry)
+  if (memoryActivity.length > 1000) memoryActivity.splice(0, memoryActivity.length - 1000)
+  if (isMongoConnected && AdminActivityModel) {
+    try {
+      await AdminActivityModel.create({ username: entry.username, action: entry.action, detail: entry.detail, createdAt: entry.createdAt })
+    } catch (e) {
+      console.error('Activity log DB save error (memory value kept):', e.message)
+    }
+  }
+  return entry
+}
+
+async function getAdminActivity(limit = 100) {
+  const n = Math.min(Math.max(Number(limit) || 100, 1), 500)
+  if (isMongoConnected && AdminActivityModel) {
+    try {
+      const rows = await AdminActivityModel.find({}).sort({ createdAt: -1 }).limit(n).lean()
+      return rows.map(activityPublic)
+    } catch (e) {
+      console.error('Activity log DB query error, falling back to memory:', e)
+    }
+  }
+  return [...memoryActivity].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, n).map(activityPublic)
+}
+
+// Token auth for admin endpoints. Tokens are random, in-memory, and single-server;
+// every mutating admin call requires one, and the actor is logged from it.
+const adminTokens = new Map() // token -> username
+
+function adminAuth(req, res, next) {
+  const header = req.headers.authorization || ''
+  const token = header.startsWith('Bearer ') ? header.slice(7) : ''
+  const username = token && adminTokens.get(token)
+  if (!username) {
+    return res.status(401).json({ message: 'Admin login required' })
+  }
+  req.adminUsername = username
+  next()
+}
+
+async function adminIsSuperAdmin(username) {
+  const admin = await findAdminByUsername(username)
+  return !!admin?.isSuperAdmin
+}
+
 // MongoDB Schema for Bid
 const bidSchema = new mongoose.Schema({
   lotId: { type: String, required: true },
@@ -103,6 +241,9 @@ if (MONGODB_URI) {
       BidModel = mongoose.model('Bid', bidSchema)
       PriceConfigModel = mongoose.model('PriceConfig', priceConfigSchema)
       TraderModel = mongoose.model('Trader', traderSchema)
+      AdminUserModel = mongoose.model('AdminUser', adminUserSchema)
+      AdminActivityModel = mongoose.model('AdminActivity', adminActivitySchema)
+      ensureSuperAdmin()
     })
     .catch((err) => {
       console.warn('MongoDB connection notice (using in-memory bid store):', err.message)
@@ -297,10 +438,15 @@ app.get('/api/price-config', async (req, res) => {
 })
 
 // Admin endpoint: update the global pricing config (default hike, range hikes, timer earliness)
-app.post('/api/admin/price-config', async (req, res) => {
+app.post('/api/admin/price-config', adminAuth, async (req, res) => {
   try {
     const { priceHike, rangeHikes, timerEarlyHours } = req.body
     const saved = await savePriceConfig({ priceHike, rangeHikes, timerEarlyHours })
+    const changed = []
+    if (priceHike !== undefined) changed.push(`default hike → ${saved.priceHike}%`)
+    if (rangeHikes !== undefined) changed.push(`${saved.rangeHikes.length} custom range(s)`)
+    if (timerEarlyHours !== undefined) changed.push(`timer earliness → ${saved.timerEarlyHours}h`)
+    await logAdminActivity(req.adminUsername, 'update_price_config', changed.join(', ') || 'Saved price config')
     res.json({ success: true, ...saved })
   } catch (err) {
     console.error('Error saving price config:', err)
@@ -380,6 +526,124 @@ async function saveBid(bidData) {
 // Routes
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', mongoConnected: isMongoConnected })
+})
+
+// ---------- Admin auth & management ----------
+// Admin login: verifies username/password, returns a token + admin identity.
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { username, password } = req.body || {}
+    const admin = await findAdminByUsername(username)
+    if (!admin || admin.password !== String(password || '')) {
+      return res.status(401).json({ message: 'Invalid username or password' })
+    }
+    const token = crypto.randomBytes(32).toString('hex')
+    adminTokens.set(token, admin.username)
+    await logAdminActivity(admin.username, 'login', 'Signed in to the admin panel')
+    res.json({ success: true, token, admin: adminPublic(admin) })
+  } catch (err) {
+    console.error('Admin login error:', err)
+    res.status(500).json({ message: 'Admin login failed', error: err.message })
+  }
+})
+
+// Admin logout: invalidates the token.
+app.post('/api/admin/logout', adminAuth, async (req, res) => {
+  const header = req.headers.authorization || ''
+  adminTokens.delete(header.startsWith('Bearer ') ? header.slice(7) : '')
+  res.json({ success: true })
+})
+
+// List all admin accounts.
+app.get('/api/admin/admins', adminAuth, async (req, res) => {
+  try {
+    let admins = []
+    if (isMongoConnected && AdminUserModel) {
+      admins = (await AdminUserModel.find({}).sort({ createdAt: 1 }).lean()).map(adminPublic)
+    } else {
+      admins = seedMemoryAdmins().map(adminPublic)
+    }
+    res.json({ success: true, admins })
+  } catch (err) {
+    console.error('Error fetching admins:', err)
+    res.status(500).json({ message: 'Failed to fetch admin accounts', error: err.message })
+  }
+})
+
+// Create a new admin account. SUPER ADMIN ONLY.
+app.post('/api/admin/admins', adminAuth, async (req, res) => {
+  try {
+    if (!(await adminIsSuperAdmin(req.adminUsername))) {
+      return res.status(403).json({ message: 'Only the super admin can create admin accounts' })
+    }
+    const username = String(req.body?.username || '').toLowerCase().trim()
+    const password = String(req.body?.password || '')
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) {
+      return res.status(400).json({ message: 'Username must be 3-30 chars: letters, numbers, underscore' })
+    }
+    if (password.length < 4) {
+      return res.status(400).json({ message: 'Password must be at least 4 characters' })
+    }
+    if (await findAdminByUsername(username)) {
+      return res.status(409).json({ message: 'An admin with this username already exists' })
+    }
+    const doc = { username, password, isSuperAdmin: false, createdBy: req.adminUsername, createdAt: new Date() }
+    if (isMongoConnected && AdminUserModel) {
+      await AdminUserModel.create(doc)
+    } else {
+      seedMemoryAdmins().push(doc)
+    }
+    await logAdminActivity(req.adminUsername, 'create_admin', `Created admin account "${username}"`)
+    res.status(201).json({ success: true, admin: adminPublic(doc) })
+  } catch (err) {
+    console.error('Error creating admin:', err)
+    res.status(500).json({ message: 'Failed to create admin account', error: err.message })
+  }
+})
+
+// Delete an admin account. SUPER ADMIN ONLY, and never self / never the super admin.
+app.delete('/api/admin/admins/:username', adminAuth, async (req, res) => {
+  try {
+    if (!(await adminIsSuperAdmin(req.adminUsername))) {
+      return res.status(403).json({ message: 'Only the super admin can remove admin accounts' })
+    }
+    const username = String(req.params.username || '').toLowerCase().trim()
+    if (username === SUPER_ADMIN_USERNAME) {
+      return res.status(400).json({ message: 'The super admin account cannot be removed' })
+    }
+    if (username === String(req.adminUsername).toLowerCase()) {
+      return res.status(400).json({ message: 'You cannot remove your own account' })
+    }
+    if (isMongoConnected && AdminUserModel) {
+      const deleted = await AdminUserModel.findOneAndDelete({ username })
+      if (!deleted) return res.status(404).json({ message: 'Admin account not found' })
+    } else {
+      const admins = seedMemoryAdmins()
+      const idx = admins.findIndex((a) => a.username === username)
+      if (idx === -1) return res.status(404).json({ message: 'Admin account not found' })
+      admins.splice(idx, 1)
+    }
+    // Drop any live sessions for the removed admin
+    for (const [tok, user] of adminTokens) {
+      if (user === username) adminTokens.delete(tok)
+    }
+    await logAdminActivity(req.adminUsername, 'remove_admin', `Removed admin account "${username}"`)
+    res.json({ success: true })
+  } catch (err) {
+    console.error('Error removing admin:', err)
+    res.status(500).json({ message: 'Failed to remove admin account', error: err.message })
+  }
+})
+
+// Recent admin activity (who did what, when). Any logged-in admin can view.
+app.get('/api/admin/activity', adminAuth, async (req, res) => {
+  try {
+    const activity = await getAdminActivity(req.query.limit)
+    res.json({ success: true, activity })
+  } catch (err) {
+    console.error('Error fetching activity:', err)
+    res.status(500).json({ message: 'Failed to fetch activity log', error: err.message })
+  }
 })
 
 // ---------- Trader account helpers ----------
@@ -595,7 +859,7 @@ app.post('/api/auth/resend-otp', async (req, res) => {
 })
 
 // ---------- Admin: trader account management ----------
-app.get('/api/admin/traders', async (req, res) => {
+app.get('/api/admin/traders', adminAuth, async (req, res) => {
   try {
     let traders = []
     if (isMongoConnected && TraderModel) {
@@ -619,7 +883,7 @@ app.get('/api/admin/traders', async (req, res) => {
   }
 })
 
-app.post('/api/admin/traders/:id/status', async (req, res) => {
+app.post('/api/admin/traders/:id/status', adminAuth, async (req, res) => {
   try {
     const { status } = req.body || {}
     if (!['approved', 'rejected', 'pending'].includes(status)) {
@@ -629,6 +893,7 @@ app.post('/api/admin/traders/:id/status', async (req, res) => {
     if (!updated) {
       return res.status(404).json({ message: 'Trader account not found' })
     }
+    await logAdminActivity(req.adminUsername, `trader_${status}`, `${updated.name || ''} (${updated.email || ''})`.trim())
     res.json({ success: true, trader: traderPublic(updated) })
   } catch (err) {
     console.error('Error updating trader status:', err)
@@ -881,7 +1146,7 @@ app.get('/api/bids/lot/:lotId', async (req, res) => {
 })
 
 // Admin Orders Dashboard Endpoint
-app.get('/api/admin/orders', async (req, res) => {
+app.get('/api/admin/orders', adminAuth, async (req, res) => {
   try {
     const allBids = await getAllBids()
 
