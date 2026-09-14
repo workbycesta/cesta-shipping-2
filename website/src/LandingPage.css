@@ -5,13 +5,13 @@
 
 .lotmart-root {
   --wl-bg: #ffffff;
-  --wl-bg-alt: #f8fafc;
-  --wl-ink: #0f172a;
-  --wl-body: #475569;
-  --wl-muted: #64748b;
-  --wl-line: #e2e8f0;
-  --wl-brand: #1d4ed8;
-  --wl-brand-dark: #1e3a8a;
+  --wl-bg-alt: #faf7f7;
+  --wl-ink: #2b1214;
+  --wl-body: #5b4a4b;
+  --wl-muted: #8a7576;
+  --wl-line: #ece0e0;
+  --wl-brand: #7e1b1e;
+  --wl-brand-dark: #5f1315;
   --wl-radius: 8px;
 
   min-height: 100vh;
@@ -184,6 +184,23 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.landing-logo__img {
+  height: 44px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+.landing-logo--img {
+  gap: 10px;
+}
+
+.landing-logo__img--footer {
+  height: 52px;
+  max-width: 230px;
 }
 
 .landing-logo__accent {
@@ -746,8 +763,8 @@
 }
 
 .landing-mission__card {
-  background: var(--wl-ink);
-  color: #cbd5e1;
+  background: var(--wl-brand-dark);
+  color: #f3dddd;
   border-radius: 10px;
   padding: 28px;
 }
@@ -764,7 +781,7 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: #93c5fd;
+  color: #f0b9b9;
   display: block;
   margin-bottom: 8px;
 }

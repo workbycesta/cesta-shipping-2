@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { IconArrowRight, IconBox } from './LandingIcons'
+import { IconArrowRight } from './LandingIcons'
 
 export default function LandingFooter() {
   return (
@@ -30,11 +30,8 @@ export default function LandingFooter() {
         <div className="landing-container">
           <div className="landing-footer__top">
             <div>
-              <span className="landing-logo">
-                <span className="landing-logo__emblem">
-                  <IconBox size={18} />
-                </span>
-                <span>LOT<span className="landing-logo__accent">MART</span></span>
+              <span className="landing-logo landing-logo--img">
+                <img src="/header-logo.png" alt="Lotmart" className="landing-logo__img landing-logo__img--footer" />
               </span>
               <p className="landing-footer__tagline">
                 A B2B auction marketplace for liquidation, overstock, customer returns,

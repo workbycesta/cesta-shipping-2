@@ -45,6 +45,23 @@
   flex-shrink: 0;
 }
 
+.site-logo__img {
+  height: 44px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
+  display: block;
+}
+
+.site-logo--img {
+  gap: 10px;
+}
+
+.site-logo__img--footer {
+  height: 52px;
+  max-width: 230px;
+}
+
 .site-logo__accent {
   color: var(--wl-brand);
   margin-left: 5px;

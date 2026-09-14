@@ -1,21 +1,21 @@
 /* ==========================================================================
    LOTMART — SITE-WIDE DESIGN SYSTEM (buyer pages)
-   Same tokens as the landing page: white theme, Inter, blue brand.
+   Same tokens as the landing page: white theme, Inter, maroon brand.
    Landing page keeps its own scoped stylesheet; these classes are for
    the shop, marketplaces, product detail, account, and auth pages.
    ========================================================================== */
 
 :root {
   --wl-bg: #ffffff;
-  --wl-bg-alt: #f8fafc;
-  --wl-ink: #0f172a;
-  --wl-body: #475569;
-  --wl-muted: #64748b;
-  --wl-line: #e2e8f0;
-  --wl-line-dark: #cbd5e1;
-  --wl-brand: #1d4ed8;
-  --wl-brand-dark: #1e3a8a;
-  --wl-brand-soft: #eff6ff;
+  --wl-bg-alt: #faf7f7;
+  --wl-ink: #2b1214;
+  --wl-body: #5b4a4b;
+  --wl-muted: #8a7576;
+  --wl-line: #ece0e0;
+  --wl-line-dark: #d9c6c6;
+  --wl-brand: #7e1b1e;
+  --wl-brand-dark: #5f1315;
+  --wl-brand-soft: #fbeded;
   --wl-radius: 8px;
 
   --wl-success: #15803d;
@@ -27,9 +27,9 @@
   --wl-warning: #92400e;
   --wl-warning-bg: #fffbeb;
   --wl-warning-line: #fde68a;
-  --wl-info: #1e40af;
-  --wl-info-bg: #eff6ff;
-  --wl-info-line: #bfdbfe;
+  --wl-info: #7e1b1e;
+  --wl-info-bg: #fbeded;
+  --wl-info-line: #e4b8b8;
 }
 
 .wl-page {

@@ -11,11 +11,8 @@ export default function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link to="/" className="site-logo" aria-label="Lotmart Home">
-          <span className="site-logo__emblem">L</span>
-          <span className="site-logo__text">
-            LOT<span className="site-logo__accent">MART</span>
-          </span>
+        <Link to="/" className="site-logo site-logo--img" aria-label="Lotmart Home">
+          <img src="/header-logo.png" alt="Lotmart" className="site-logo__img" />
           <span className="site-logo__badge">B2B</span>
         </Link>
 
@@ -97,11 +94,8 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="wl-container site-footer__top">
         <div>
-          <span className="site-logo">
-            <span className="site-logo__emblem">L</span>
-            <span className="site-logo__text">
-              LOT<span className="site-logo__accent">MART</span>
-            </span>
+          <span className="site-logo site-logo--img">
+            <img src="/header-logo.png" alt="Lotmart" className="site-logo__img site-logo__img--footer" />
           </span>
           <p className="site-footer__tagline">
             A B2B auction marketplace for liquidation, overstock, customer returns,

@@ -6,3 +6,6 @@
 - Prefers research-backed builds: consult current web best practices before building major UI sections to reach professional e-commerce standard. Confidence: 0.8
 - Prefers generous vertical whitespace / breathing room between hero headline, description, buttons, and lists rather than tight stacking. Confidence: 0.85
 - Prefers product image galleries to show only product photos; source/marketplace logos should be small discrete badges (e.g., 'Sourced from' under title) rather than large overlays filling gallery space. Confidence: 0.9
+- Prefers site-wide theme (colors, fonts, styles) to be derived from the provided brand logo so the whole website matches the logo's palette. Confidence: 0.9
+- Prefers image logo assets over text-based brand names: use the provided header-logo image wherever the brand name appears (headers, footers, hero). Confidence: 0.9
+- Prefers the provided favicon asset to be wired as the site favicon rather than a default icon. Confidence: 0.9

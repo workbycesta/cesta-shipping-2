@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../../UserContext'
-import { IconBox, IconClose } from './LandingIcons'
+import { IconClose } from './LandingIcons'
 
 export default function LandingHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -28,11 +28,8 @@ export default function LandingHeader() {
     <>
       <header className="landing-header">
         <div className="landing-header__inner">
-          <Link to="/" className="landing-logo" aria-label="Lotmart Home">
-            <span className="landing-logo__emblem">
-              <IconBox size={18} />
-            </span>
-            <span>LOT<span className="landing-logo__accent">MART</span></span>
+          <Link to="/" className="landing-logo landing-logo--img" aria-label="Lotmart Home">
+            <img src="/header-logo.png" alt="Lotmart" className="landing-logo__img" />
             <span className="landing-logo__badge">B2B</span>
           </Link>
 
@@ -134,8 +131,8 @@ export default function LandingHeader() {
         <div className="landing-mobile-drawer__overlay" onClick={() => setMobileMenuOpen(false)} />
         <div className="landing-mobile-drawer__panel">
           <div className="landing-mobile-drawer__header">
-            <span className="landing-logo">
-              LOT<span className="landing-logo__accent">MART</span>
+            <span className="landing-logo landing-logo--img">
+              <img src="/header-logo.png" alt="Lotmart" className="landing-logo__img" />
             </span>
             <button
               type="button"
