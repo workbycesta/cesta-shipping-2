@@ -1469,6 +1469,10 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
     for (const [lotId, bids] of lotMap.entries()) {
       bids.sort((a, b) => b.bidAmount - a.bidAmount || new Date(a.timestamp) - new Date(b.timestamp))
       const topBid = bids[0]
+      const latestBidAt = bids.reduce((max, b) => {
+        const t = new Date(b.timestamp).getTime()
+        return Number.isFinite(t) && t > max ? t : max
+      }, 0)
 
       orders.push({
         lotId,
@@ -1481,6 +1485,7 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
         currentTopBid: topBid.bidAmount,
         winningUserEmail: topBid.userEmail,
         winningUserName: topBid.userName,
+        latestBidAt: latestBidAt ? new Date(latestBidAt).toISOString() : topBid.timestamp,
         allotment: allotmentPublic(allotments[String(lotId)]) || null,
         manuallyEnded: !!manualEnds[String(lotId)],
         manualEnd: manualEnds[String(lotId)] || null,
@@ -1495,8 +1500,8 @@ app.get('/api/admin/orders', adminAuth, async (req, res) => {
       })
     }
 
-    // Sort orders by top bid value descending
-    orders.sort((a, b) => b.currentTopBid - a.currentTopBid)
+    // Sort orders newest first (by latest bid time on each lot)
+    orders.sort((a, b) => new Date(b.latestBidAt) - new Date(a.latestBidAt))
 
     res.json({
       success: true,

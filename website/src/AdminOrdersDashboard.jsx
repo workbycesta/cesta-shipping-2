@@ -282,14 +282,24 @@ export default function AdminOrdersDashboard() {
     )
   }
 
-  const filteredOrders = (ordersData.orders || []).filter((order) => {
-    const term = searchTerm.toLowerCase()
-    return (
-      order.lotName.toLowerCase().includes(term) ||
-      order.lotId.includes(term) ||
-      order.winningUserEmail.toLowerCase().includes(term)
-    )
-  })
+  const latestBidTime = (order) => {
+    if (order.latestBidAt) return new Date(order.latestBidAt).getTime() || 0
+    return (order.bidders || []).reduce((max, b) => {
+      const t = new Date(b.timestamp).getTime()
+      return Number.isFinite(t) && t > max ? t : max
+    }, 0)
+  }
+
+  const filteredOrders = (ordersData.orders || [])
+    .filter((order) => {
+      const term = searchTerm.toLowerCase()
+      return (
+        order.lotName.toLowerCase().includes(term) ||
+        order.lotId.includes(term) ||
+        order.winningUserEmail.toLowerCase().includes(term)
+      )
+    })
+    .sort((a, b) => latestBidTime(b) - latestBidTime(a))
 
   const selectedOrder = (ordersData.orders || []).find((o) => o.lotId === selectedLotId) || filteredOrders[0]
   const selectedTimer = selectedOrder ? timers[selectedOrder.lotId] : null
