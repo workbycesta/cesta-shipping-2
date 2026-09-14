@@ -43,7 +43,7 @@ export default function DirectModelComparison() {
           </div>
 
           <div className="landing-compare__card landing-compare__card--highlight">
-            <span className="landing-compare__label">Wholelot Traders</span>
+            <span className="landing-compare__label">Lotmart</span>
             <h3>Listed once, bid openly</h3>
             <p>One listing, one manifest, every registered buyer sees the same terms.</p>
             <ul className="landing-plain-list">

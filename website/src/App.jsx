@@ -118,10 +118,10 @@ function AdminTradersSection() {
 
   return (
     <div className="admin-section">
-      <h2>Trader Accounts</h2>
+      <h2>Buyer Accounts</h2>
       <p className="admin-desc">
         Buyer registrations from the website. Approve or reject each account — only approved
-        traders can sign in and bid.
+        buyers can sign in and bid.
       </p>
 
       <div className="trader-tabs">
@@ -597,9 +597,9 @@ function describeActivity(a) {
     case 'update_price_config': return `updated price config (${a.detail || 'saved'})`
     case 'update_price_hike': return `updated price hikes (${a.detail || 'saved'})`
     case 'update_timer_config': return `updated timer config (${a.detail || 'saved'})`
-    case 'trader_approved': return `approved trader ${a.detail || ''}`.trim()
-    case 'trader_rejected': return `rejected trader ${a.detail || ''}`.trim()
-    case 'trader_pending': return `moved trader back to pending ${a.detail || ''}`.trim()
+    case 'trader_approved': return `approved buyer ${a.detail || ''}`.trim()
+    case 'trader_rejected': return `rejected buyer ${a.detail || ''}`.trim()
+    case 'trader_pending': return `moved buyer back to pending ${a.detail || ''}`.trim()
     case 'assign_bid': return `assigned a bid (${a.detail || 'saved'})`
     case 'end_bidding': return `ended bidding early (${a.detail || 'saved'})`
     case 'reopen_bidding': return `reopened bidding (${a.detail || 'saved'})`

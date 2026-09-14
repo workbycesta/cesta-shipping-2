@@ -25,7 +25,7 @@ export default function HeroSection() {
           </h1>
 
           <p className="landing-hero__description">
-            Wholelot Traders is a business-to-business auction marketplace where
+            Lotmart is a business-to-business auction marketplace where
             registered buyers bid on excess inventory — overstock, customer returns,
             and closeout lots — sold by the pallet and truckload.
           </p>

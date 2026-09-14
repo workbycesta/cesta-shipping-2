@@ -28,11 +28,11 @@ export default function LandingHeader() {
     <>
       <header className="landing-header">
         <div className="landing-header__inner">
-          <Link to="/" className="landing-logo" aria-label="Wholelot Traders Home">
+          <Link to="/" className="landing-logo" aria-label="Lotmart Home">
             <span className="landing-logo__emblem">
               <IconBox size={18} />
             </span>
-            <span>WHOLELOT<span className="landing-logo__accent">TRADERS</span></span>
+            <span>LOT<span className="landing-logo__accent">MART</span></span>
             <span className="landing-logo__badge">B2B</span>
           </Link>
 
@@ -73,7 +73,7 @@ export default function LandingHeader() {
                 {userDropdownOpen && (
                   <div className="landing-user-dropdown" onClick={() => setUserDropdownOpen(false)}>
                     <div className="landing-user-dropdown__header">
-                      <strong>{user.name || 'Trader Account'}</strong>
+                      <strong>{user.name || 'Lotmart Account'}</strong>
                       <span>{user.email}</span>
                     </div>
                     <div className="landing-user-dropdown__divider" />
@@ -135,7 +135,7 @@ export default function LandingHeader() {
         <div className="landing-mobile-drawer__panel">
           <div className="landing-mobile-drawer__header">
             <span className="landing-logo">
-              WHOLELOT<span className="landing-logo__accent">TRADERS</span>
+              LOT<span className="landing-logo__accent">MART</span>
             </span>
             <button
               type="button"

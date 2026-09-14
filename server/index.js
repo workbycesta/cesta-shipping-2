@@ -14,7 +14,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/cesta'
 app.use(cors())
 app.use(express.json())
 
-// MongoDB Schema for Trader accounts (real registrations, admin-approved)
+// MongoDB Schema for Buyer accounts (real registrations, admin-approved)
 const traderSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
@@ -187,7 +187,7 @@ const bidSchema = new mongoose.Schema({
   floorPrice: { type: Number, default: 0 },
   mrp: { type: Number, default: 0 },
   userEmail: { type: String, required: true },
-  userName: { type: String, default: 'Trader' },
+  userName: { type: String, default: 'Buyer' },
   timestamp: { type: Date, default: Date.now },
   endDate: { type: String, default: '' }
 })
@@ -658,7 +658,7 @@ async function getAllBids() {
         floorPrice: Number(b.floorPrice || 0),
         mrp: Number(b.mrp || 0),
         userEmail: b.userEmail.toLowerCase(),
-        userName: b.userName || 'Trader',
+        userName: b.userName || 'Buyer',
         timestamp: new Date(b.timestamp),
         endDate: b.endDate || ''
       }))
@@ -835,7 +835,7 @@ app.get('/api/admin/activity', adminAuth, async (req, res) => {
   }
 })
 
-// ---------- Trader account helpers ----------
+// ---------- Buyer account helpers ----------
 function traderPublic(t) {
   return {
     id: t._id ? t._id.toString() : t.id,
@@ -858,7 +858,7 @@ async function findTraderByEmail(email) {
     try {
       return await TraderModel.findOne({ email: cleanEmail }).lean()
     } catch (e) {
-      console.error('Trader lookup error:', e)
+      console.error('Buyer lookup error:', e)
     }
   }
   return memoryTraders.find(t => t.email === cleanEmail) || null
@@ -871,7 +871,7 @@ async function updateTrader(id, updates) {
     } catch (e) {
       // Invalid ObjectId format (e.g. legacy in-memory id) -> fall through to memory lookup
       if (!(e && e.name === 'CastError')) {
-        console.error('Trader update error:', e)
+        console.error('Buyer update error:', e)
       }
     }
   }
@@ -1047,7 +1047,7 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 })
 
-// ---------- Admin: trader account management ----------
+// ---------- Admin: buyer account management ----------
 app.get('/api/admin/traders', adminAuth, async (req, res) => {
   try {
     let traders = []
@@ -1068,7 +1068,7 @@ app.get('/api/admin/traders', adminAuth, async (req, res) => {
     })
   } catch (err) {
     console.error('Error fetching traders:', err)
-    res.status(500).json({ message: 'Failed to fetch trader accounts', error: err.message })
+    res.status(500).json({ message: 'Failed to fetch buyer accounts', error: err.message })
   }
 })
 
@@ -1080,17 +1080,17 @@ app.post('/api/admin/traders/:id/status', adminAuth, async (req, res) => {
     }
     const updated = await updateTrader(req.params.id, { status, reviewedAt: new Date() })
     if (!updated) {
-      return res.status(404).json({ message: 'Trader account not found' })
+      return res.status(404).json({ message: 'Buyer account not found' })
     }
     await logAdminActivity(req.adminUsername, `trader_${status}`, `${updated.name || ''} (${updated.email || ''})`.trim(), 'traders')
     res.json({ success: true, trader: traderPublic(updated) })
   } catch (err) {
     console.error('Error updating trader status:', err)
-    res.status(500).json({ message: 'Failed to update trader status', error: err.message })
+    res.status(500).json({ message: 'Failed to update buyer status', error: err.message })
   }
 })
 
-// Authentication Route (only admin-approved traders may sign in)
+// Authentication Route (only admin-approved buyers may sign in)
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {}
@@ -1742,7 +1742,7 @@ app.get('/api/admin/sourcing/:lotId', adminAuth, async (req, res) => {
   }
 })
 
-// Build the manifest Excel buffer for a lot with WholeLot Traders price hike applied.
+// Build the manifest Excel buffer for a lot with Lotmart price hike applied.
 // Used by both the download endpoint and the email endpoint.
 async function buildManifestExcel(lotId) {
   // 1. Fetch lot details from b4traders
@@ -1920,7 +1920,7 @@ async function buildManifestExcel(lotId) {
   return { excelBuffer, filename: `manifest_${lotNumber}.xlsx`, lotName }
 }
 
-// Download Manifest with WholeLot Traders Price Hike Applied
+// Download Manifest with Lotmart Price Hike Applied
 app.get(['/api/manifest/:lotId', '/api/lots/:lotId/manifest'], async (req, res) => {
   try {
     const lotId = String(req.params.lotId).trim()
@@ -1977,7 +1977,7 @@ app.post('/api/manifest/:lotId/email', async (req, res) => {
       from: mailFrom,
       to: email,
       subject: `Manifest - ${lotName}`,
-      text: `Hi,\n\nPlease find attached the manifest for "${lotName}".\n\nAll Floor Prices already include the WholeLot Traders markup.\n\nThanks,\nWholeLot Traders`,
+      text: `Hi,\n\nPlease find attached the manifest for "${lotName}".\n\nAll Floor Prices already include the Lotmart markup.\n\nThanks,\nLotmart`,
       attachments: [
         {
           filename,

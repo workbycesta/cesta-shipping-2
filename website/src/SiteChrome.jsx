@@ -11,10 +11,10 @@ export default function SiteHeader() {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link to="/" className="site-logo" aria-label="Wholelot Traders Home">
-          <span className="site-logo__emblem">W</span>
+        <Link to="/" className="site-logo" aria-label="Lotmart Home">
+          <span className="site-logo__emblem">L</span>
           <span className="site-logo__text">
-            WHOLELOT<span className="site-logo__accent">TRADERS</span>
+            LOT<span className="site-logo__accent">MART</span>
           </span>
           <span className="site-logo__badge">B2B</span>
         </Link>
@@ -48,7 +48,7 @@ export default function SiteHeader() {
               {dropdownOpen && (
                 <div className="site-user__dropdown" onClick={() => setDropdownOpen(false)}>
                   <div className="site-user__dropdown-head">
-                    <strong>{user.name || 'Trader Account'}</strong>
+                    <strong>{user.name || 'Lotmart Account'}</strong>
                     <span>{user.email}</span>
                   </div>
                   <div className="site-user__divider" />
@@ -98,9 +98,9 @@ export function SiteFooter() {
       <div className="wl-container site-footer__top">
         <div>
           <span className="site-logo">
-            <span className="site-logo__emblem">W</span>
+            <span className="site-logo__emblem">L</span>
             <span className="site-logo__text">
-              WHOLELOT<span className="site-logo__accent">TRADERS</span>
+              LOT<span className="site-logo__accent">MART</span>
             </span>
           </span>
           <p className="site-footer__tagline">
@@ -109,7 +109,7 @@ export function SiteFooter() {
           </p>
           <div className="site-footer__contact">
             <p><strong>Phone:</strong> 1800-419-0431</p>
-            <p><strong>Email:</strong> support@wholelottraders.com</p>
+            <p><strong>Email:</strong> support@lotmart.com</p>
           </div>
         </div>
 
@@ -134,7 +134,7 @@ export function SiteFooter() {
       </div>
 
       <div className="wl-container site-footer__bottom">
-        <span>© {new Date().getFullYear()} Wholelot Traders. All rights reserved.</span>
+        <span>© {new Date().getFullYear()} Lotmart. All rights reserved.</span>
       </div>
     </footer>
   )

@@ -12,7 +12,7 @@ const TIMELINE = [
   {
     tag: 'This marketplace',
     title: 'Listed once, bid openly',
-    desc: 'Wholelot Traders lists each lot with its manifest and condition grade, and lets registered businesses bid against each other in the open.'
+    desc: 'Lotmart lists each lot with its manifest and condition grade, and lets registered businesses bid against each other in the open.'
   },
   {
     tag: 'The outcome',
@@ -27,7 +27,7 @@ export default function CompanyStory() {
       <div className="landing-container">
         <div className="landing-section__header">
           <span className="landing-eyebrow">About the business</span>
-          <h2 className="landing-section__title">What Wholelot Traders is.</h2>
+          <h2 className="landing-section__title">What Lotmart is.</h2>
           <p className="landing-section__subtitle">
             A business-to-business marketplace for excess inventory — overstock,
             customer returns, closeouts, and surplus goods — traded in pallet

@@ -34,7 +34,7 @@ export default function LandingFooter() {
                 <span className="landing-logo__emblem">
                   <IconBox size={18} />
                 </span>
-                <span>WHOLELOT<span className="landing-logo__accent">TRADERS</span></span>
+                <span>LOT<span className="landing-logo__accent">MART</span></span>
               </span>
               <p className="landing-footer__tagline">
                 A B2B auction marketplace for liquidation, overstock, customer returns,
@@ -42,7 +42,7 @@ export default function LandingFooter() {
               </p>
               <div className="landing-footer__contact">
                 <p><strong>Phone:</strong> 1800-419-0431</p>
-                <p><strong>Email:</strong> support@wholelottraders.com</p>
+                <p><strong>Email:</strong> support@lotmart.com</p>
               </div>
             </div>
 
@@ -68,7 +68,7 @@ export default function LandingFooter() {
           </div>
 
           <div className="landing-footer__bottom">
-            <span>© {new Date().getFullYear()} Wholelot Traders. All rights reserved.</span>
+            <span>© {new Date().getFullYear()} Lotmart. All rights reserved.</span>
           </div>
         </div>
       </footer>

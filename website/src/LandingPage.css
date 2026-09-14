@@ -1,9 +1,9 @@
 /* ==========================================================================
-   WHOLELOT TRADERS — LANDING PAGE (light business theme)
+   LOTMART — LANDING PAGE (light business theme)
    Plain white theme, system-friendly styling. No mock data on this page.
    ========================================================================== */
 
-.wholelot-root {
+.lotmart-root {
   --wl-bg: #ffffff;
   --wl-bg-alt: #f8fafc;
   --wl-ink: #0f172a;
@@ -22,20 +22,20 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.wholelot-root h1,
-.wholelot-root h2,
-.wholelot-root h3,
-.wholelot-root h4 {
+.lotmart-root h1,
+.lotmart-root h2,
+.lotmart-root h3,
+.lotmart-root h4 {
   color: var(--wl-ink);
   line-height: 1.25;
   margin: 0;
 }
 
-.wholelot-root p {
+.lotmart-root p {
   margin: 0;
 }
 
-.wholelot-main {
+.lotmart-main {
   display: block;
 }
 

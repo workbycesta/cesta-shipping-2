@@ -5,7 +5,11 @@ const UserContext = createContext(null)
 export function UserProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('trader_user')
+      const saved = localStorage.getItem('lotmart_user') || localStorage.getItem('trader_user')
+      if (saved && !localStorage.getItem('lotmart_user')) {
+        localStorage.setItem('lotmart_user', saved)
+        localStorage.removeItem('trader_user')
+      }
       return saved ? JSON.parse(saved) : null
     } catch (e) {
       return null
@@ -26,7 +30,7 @@ export function UserProvider({ children }) {
         throw new Error(data.message || 'Login failed')
       }
       setUser(data.user)
-      localStorage.setItem('trader_user', JSON.stringify(data.user))
+      localStorage.setItem('lotmart_user', JSON.stringify(data.user))
       setIsSignInModalOpen(false)
       return { success: true }
     } catch (err) {
@@ -36,7 +40,7 @@ export function UserProvider({ children }) {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('trader_user')
+    localStorage.removeItem('lotmart_user')
   }
 
   const openSignInModal = () => setIsSignInModalOpen(true)

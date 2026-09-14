@@ -10,10 +10,10 @@ import './LandingPage.css'
 
 export default function LandingPage() {
   return (
-    <div className="wholelot-root">
+    <div className="lotmart-root">
       <LandingHeader />
 
-      <main className="wholelot-main">
+      <main className="lotmart-main">
         <HeroSection />
         <MarketplacesSection />
         <AuctionFlow />
