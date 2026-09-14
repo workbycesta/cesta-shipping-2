@@ -364,12 +364,14 @@
   font-size: 2.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  margin-bottom: 16px;
+  line-height: 1.2;
+  margin-bottom: 20px;
 }
 
 .landing-hero__description {
   font-size: 1.08rem;
-  margin-bottom: 28px;
+  line-height: 1.75;
+  margin-bottom: 44px;
   max-width: 560px;
 }
 
@@ -377,7 +379,8 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
+  margin-top: 20px;
+  margin-bottom: 36px;
 }
 
 .landing-hero__points {
@@ -386,8 +389,9 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .landing-hero__points li {
