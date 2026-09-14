@@ -2,7 +2,7 @@ const FLOW_STEPS = [
   {
     step: '01',
     title: 'Register your business',
-    description: 'Create a buyer account with your business details. Seller listings go through a separate appraisal request.'
+    description: 'Create a buyer account with your business details to start bidding.'
   },
   {
     step: '02',
@@ -42,10 +42,10 @@ export default function AuctionFlow() {
       <div className="landing-container">
         <div className="landing-section__header">
           <span className="landing-eyebrow">The process</span>
-          <h2 className="landing-section__title">From listing to loading dock.</h2>
+          <h2 className="landing-section__title">From registration to restock.</h2>
           <p className="landing-section__subtitle">
-            Seven steps, same paperwork on both sides. Here is how a lot moves
-            from a seller&apos;s warehouse to a buyer&apos;s shelf.
+            Seven steps. Here is how a lot moves from a live listing
+            to your warehouse shelf.
           </p>
         </div>
 

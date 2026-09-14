@@ -8,7 +8,7 @@ const OLD_WAY = [
 ]
 
 const MARKETPLACE_WAY = [
-  'Sellers list directly; buyers bid directly — one marketplace in between',
+  'Direct listings with open bidding — one marketplace in between',
   'Itemized manifests and condition grades published on every lot',
   'Open auctions with visible bid history',
   'Standard process: bid, pay, collect'

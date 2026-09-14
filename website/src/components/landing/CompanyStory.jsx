@@ -17,7 +17,7 @@ const TIMELINE = [
   {
     tag: 'The outcome',
     title: 'Stock keeps moving',
-    desc: 'Sellers recover value from idle inventory. Buyers get documented stock at wholesale economics. Goods stay in circulation.'
+    desc: 'Buyers get documented stock at wholesale economics, and goods stay in circulation instead of going to waste.'
   }
 ]
 
@@ -48,7 +48,7 @@ export default function CompanyStory() {
         <div className="landing-mission">
           <div className="landing-mission__card">
             <span>How we operate</span>
-            <h3>Sellers list. Buyers bid. Terms are public.</h3>
+            <h3>Buyers bid. Terms are public.</h3>
             <p>
               Every lot carries a manifest, a condition grade, a warehouse location,
               and the seller&apos;s terms. Bidding history is visible. The highest
@@ -57,11 +57,10 @@ export default function CompanyStory() {
           </div>
           <div className="landing-mission__card">
             <span>Who it is for</span>
-            <h3>Businesses on both sides of the pallet.</h3>
+            <h3>Businesses buying by the pallet.</h3>
             <p>
-              Sellers: retailers, brands, manufacturers, and distributors with excess
-              stock. Buyers: resellers, wholesalers, retail chains, and exporters
-              buying at wholesale scale.
+              Resellers, wholesalers, retail chains, and exporters buying
+              liquidation and surplus stock at wholesale scale.
             </p>
           </div>
         </div>

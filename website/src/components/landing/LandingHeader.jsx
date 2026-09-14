@@ -3,15 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../../UserContext'
 import { IconBox, IconClose } from './LandingIcons'
 
-const NAV_LINKS = [
-  { label: 'About', id: 'about' },
-  { label: 'For Sellers', id: 'sellers' },
-  { label: 'For Buyers', id: 'buyers' },
-  { label: 'How It Works', id: 'how-it-works' },
-  { label: 'Condition Standards', id: 'conditions' }
-]
-
-export default function LandingHeader({ onOpenSellerModal }) {
+export default function LandingHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
   const { user, openSignInModal, logout } = useUser()
@@ -26,6 +18,12 @@ export default function LandingHeader({ onOpenSellerModal }) {
     }
   }
 
+  const anchorLinks = [
+    { label: 'How It Works', id: 'how-it-works' },
+    { label: 'Condition Standards', id: 'conditions' },
+    { label: 'About', id: 'about' }
+  ]
+
   return (
     <>
       <header className="landing-header">
@@ -39,10 +37,13 @@ export default function LandingHeader({ onOpenSellerModal }) {
           </Link>
 
           <nav className="landing-nav" aria-label="Main Navigation">
-            <Link to="/products" className="landing-nav__link">
-              Marketplace
+            <Link to="/marketplaces" className="landing-nav__link">
+              Browse Marketplaces
             </Link>
-            {NAV_LINKS.map((link) => (
+            <Link to="/products" className="landing-nav__link">
+              Shop All Auctions
+            </Link>
+            {anchorLinks.map((link) => (
               <a
                 key={link.id}
                 href={`#${link.id}`}
@@ -111,10 +112,6 @@ export default function LandingHeader({ onOpenSellerModal }) {
               </>
             )}
 
-            <Link to="/products" className="landing-btn landing-btn--primary landing-btn--sm">
-              Browse Marketplace
-            </Link>
-
             <button
               type="button"
               className="landing-mobile-toggle"
@@ -150,10 +147,13 @@ export default function LandingHeader({ onOpenSellerModal }) {
           </div>
 
           <nav className="landing-mobile-nav">
-            <Link to="/products" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
-              Browse Marketplace
+            <Link to="/marketplaces" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
+              Browse Marketplaces
             </Link>
-            {NAV_LINKS.map((link) => (
+            <Link to="/products" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
+              Shop All Auctions
+            </Link>
+            {anchorLinks.map((link) => (
               <a
                 key={link.id}
                 href={`#${link.id}`}
@@ -163,17 +163,6 @@ export default function LandingHeader({ onOpenSellerModal }) {
                 {link.label}
               </a>
             ))}
-            <button
-              type="button"
-              className="landing-mobile-nav__link"
-              style={{ background: 'none', border: 'none', borderBottom: '1px solid var(--wl-line)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' }}
-              onClick={() => {
-                setMobileMenuOpen(false)
-                onOpenSellerModal()
-              }}
-            >
-              Sell Your Inventory
-            </button>
           </nav>
 
           <div className="landing-mobile-drawer__actions">
@@ -194,7 +183,7 @@ export default function LandingHeader({ onOpenSellerModal }) {
                   className="landing-btn landing-btn--primary landing-btn--block"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Create B2B Account
+                  Create Buyer Account
                 </Link>
               </>
             )}

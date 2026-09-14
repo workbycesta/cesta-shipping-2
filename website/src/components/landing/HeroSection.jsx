@@ -2,10 +2,10 @@ import { Link } from 'react-router-dom'
 import { IconArrowRight, IconCheck } from './LandingIcons'
 
 const POINTS = [
-  'Manufacturer overstock, retail surplus, and inspected customer returns',
+  'Liquidation, overstock, and customer-return lots from businesses',
   'Lots sold by the pallet up to full truckload quantities',
   'Itemized manifests and condition grades on every listing',
-  'Open to registered businesses — resellers, wholesalers, and retail chains'
+  'Open to registered buyers — resellers, wholesalers, and retail chains'
 ]
 
 const STOCK_TYPES = [
@@ -25,18 +25,19 @@ export default function HeroSection() {
           </h1>
 
           <p className="landing-hero__description">
-            Wholelot Traders is a business-to-business marketplace where companies buy
-            and sell excess inventory — overstock, customer returns, and closeout lots —
-            through open competitive bidding.
+            Wholelot Traders is a business-to-business auction marketplace where
+            registered buyers bid on excess inventory — overstock, customer returns,
+            and closeout lots — sold by the pallet and truckload.
           </p>
 
           <div className="landing-hero__actions">
-            <Link to="/products" className="landing-btn landing-btn--primary landing-btn--lg">
-              <span>Browse Live Auctions</span>
+            <Link to="/marketplaces" className="landing-btn landing-btn--primary landing-btn--lg">
+              <span>Browse Marketplaces</span>
               <IconArrowRight size={18} />
             </Link>
-            <Link to="/signup" className="landing-btn landing-btn--secondary landing-btn--lg">
-              Create a Buyer Account
+            <Link to="/products" className="landing-btn landing-btn--secondary landing-btn--lg">
+              <span>Shop All Auctions</span>
+              <IconArrowRight size={18} />
             </Link>
           </div>
 
@@ -51,7 +52,7 @@ export default function HeroSection() {
         </div>
 
         <aside className="landing-hero__side-card">
-          <h3>What trades on the marketplace</h3>
+          <h3>What you can bid on</h3>
           <ul className="landing-hero__stock-list">
             {STOCK_TYPES.map((item) => (
               <li key={item.name}>
@@ -61,9 +62,12 @@ export default function HeroSection() {
             ))}
           </ul>
           <p className="landing-hero__side-note">
-            New lots are listed by sellers on an ongoing basis. Quantities, conditions,
+            New lots are listed on an ongoing basis. Quantities, conditions,
             and locations vary per listing.
           </p>
+          <Link to="/signup" className="landing-btn landing-btn--secondary landing-btn--block" style={{ marginTop: '16px' }}>
+            Create a Buyer Account
+          </Link>
         </aside>
       </div>
     </section>
