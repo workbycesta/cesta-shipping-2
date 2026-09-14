@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useUser } from './UserContext'
 import { usePrice } from './usePrice'
-import Header from './Header'
-import './MyAccountPage.css'
+import SiteHeader, { SiteFooter } from './SiteChrome'
+import './theme.css'
+import './Account.css'
 
 function LotTimer({ endDate }) {
   const [timeLeft, setTimeLeft] = useState('')
   const [isExpired, setIsExpired] = useState(false)
-  // Countdown only displayed when the lot is 1 hour or less from ending
   const [withinLastHour, setWithinLastHour] = useState(false)
 
   useEffect(() => {
@@ -24,7 +24,7 @@ function LotTimer({ endDate }) {
       const diff = Math.floor((targetTime - now) / 1000)
 
       if (isNaN(targetTime) || diff <= 0) {
-        setTimeLeft('0 Hr 00 Min 00 Sec')
+        setTimeLeft('Ended')
         setIsExpired(true)
         setWithinLastHour(true)
         return
@@ -35,9 +35,7 @@ function LotTimer({ endDate }) {
       const h = Math.floor(diff / 3600)
       const m = Math.floor((diff % 3600) / 60)
       const s = Math.floor(diff % 60)
-      const mStr = String(m).padStart(2, '0')
-      const sStr = String(s).padStart(2, '0')
-      setTimeLeft(`${h} Hr ${mStr} Min ${sStr} Sec`)
+      setTimeLeft(`${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`)
     }
 
     updateTimer()
@@ -45,27 +43,31 @@ function LotTimer({ endDate }) {
     return () => clearInterval(timer)
   }, [endDate])
 
-  // More than 1 hour left: no countdown shown
   if (!withinLastHour) return null
 
   return (
-    <div className={`lot-timer-badge ${isExpired ? 'expired' : 'active'}`}>
-      <span className="timer-icon">⏳</span>
-      <span className="timer-label">{isExpired ? 'Auction Ended' : 'Time Left:'}</span>
-      <strong className="timer-value">{timeLeft}</strong>
+    <div className={`acct-timer ${isExpired ? 'expired' : ''}`}>
+      {isExpired ? 'Auction ended' : `Ends in ${timeLeft}`}
     </div>
   )
 }
 
+const TABS = [
+  { id: 'all', label: 'All Bids' },
+  { id: 'winning', label: 'Winning' },
+  { id: 'outbid', label: 'Outbid' },
+  { id: 'allotted', label: 'Allotted' }
+]
+
 export default function MyAccountPage() {
   const { user, openSignInModal } = useUser()
-  const { formatMoney, formatRawMoney } = usePrice()
-  const navigate = useNavigate()
+  const { formatRawMoney } = usePrice()
 
   const [bids, setBids] = useState([])
   const [allotments, setAllotments] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [tab, setTab] = useState('all')
 
   const fetchAllotments = async (email) => {
     if (!email) return
@@ -106,7 +108,6 @@ export default function MyAccountPage() {
     fetchMyBids(true)
     fetchAllotments(user.email)
 
-    // Auto refresh bids every 10 seconds to update top bids in real time
     const interval = setInterval(() => {
       fetchMyBids(false)
       fetchAllotments(user.email)
@@ -115,170 +116,195 @@ export default function MyAccountPage() {
     return () => clearInterval(interval)
   }, [user])
 
+  const enriched = useMemo(() => bids.map((bid) => {
+    const info = allotments[bid.lotId]
+    const allotted = !!info?.allotment
+    const allottedToMe = !!info?.allottedToMe
+    const isWinning = bid.status === 'Winning'
+    return { bid, info, allotted, allottedToMe, isWinning }
+  }), [bids, allotments])
+
+  const counts = useMemo(() => ({
+    all: enriched.length,
+    winning: enriched.filter((e) => e.isWinning && !e.allotted).length,
+    outbid: enriched.filter((e) => !e.isWinning && !e.allotted).length,
+    allotted: enriched.filter((e) => e.allottedToMe).length
+  }), [enriched])
+
+  const visible = useMemo(() => {
+    if (tab === 'winning') return enriched.filter((e) => e.isWinning && !e.allotted)
+    if (tab === 'outbid') return enriched.filter((e) => !e.isWinning && !e.allotted)
+    if (tab === 'allotted') return enriched.filter((e) => e.allottedToMe)
+    return enriched
+  }, [enriched, tab])
+
   if (!user) {
     return (
-      <div className="account-page">
-        <Header />
-        <div className="account-unauth-container">
-          <h2>Sign In Required</h2>
-          <p>Please sign in to view your submitted bids and account dashboard.</p>
-          <button className="btn-account-signin" onClick={openSignInModal}>
-            Sign In Now
-          </button>
-        </div>
+      <div className="wl-page">
+        <SiteHeader />
+        <main className="wl-main">
+          <div className="wl-empty" style={{ marginTop: 40 }}>
+            <h3>Sign in to view your account</h3>
+            <p>Your submitted bids, winning lots, and allotments live here.</p>
+            <div className="wl-empty-actions">
+              <button type="button" className="wl-btn wl-btn-primary" onClick={openSignInModal}>
+                Sign In
+              </button>
+              <Link to="/signup" className="wl-btn wl-btn-secondary">
+                Create an Account
+              </Link>
+            </div>
+          </div>
+        </main>
+        <SiteFooter />
       </div>
     )
   }
 
-  const winningCount = bids.filter((b) => b.status === 'Winning').length
-  const losingCount = bids.filter((b) => b.status === 'Losing').length
-  const allottedToMeCount = Object.values(allotments).filter((a) => a?.allottedToMe).length
-
   return (
-    <div className="account-page">
-      <Header />
+    <div className="wl-page">
+      <SiteHeader />
 
-      <main className="account-main">
-        <div className="account-header-card">
-          <div className="user-welcome">
+      <main className="wl-main">
+        <nav className="wl-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/">Home</Link>
+          <span className="wl-crumb-sep">/</span>
+          <span className="wl-crumb-current">My Account</span>
+        </nav>
+
+        <div className="acct-head">
+          <div>
             <h1>My Account</h1>
-            <p className="user-email-badge">Logged in as: <strong>{user.email}</strong></p>
+            <p className="wl-sub">Signed in as <strong>{user.email}</strong></p>
           </div>
+          <button type="button" className="wl-btn wl-btn-secondary wl-btn-sm" onClick={() => fetchMyBids(true)}>
+            Refresh
+          </button>
+        </div>
 
-          <div className="account-stats-grid">
-            <div className="stat-card">
-              <span className="stat-num">{bids.length}</span>
-              <span className="stat-label">Total Lots Bidded</span>
-            </div>
-            <div className="stat-card winning-stat">
-              <span className="stat-num">{winningCount}</span>
-              <span className="stat-label">Winning</span>
-            </div>
-            <div className="stat-card losing-stat">
-              <span className="stat-num">{losingCount}</span>
-              <span className="stat-label">Outbid / Losing</span>
-            </div>
-            {allottedToMeCount > 0 && (
-              <div className="stat-card winning-stat">
-                <span className="stat-num">{allottedToMeCount}</span>
-                <span className="stat-label">Allotted To You</span>
-              </div>
-            )}
+        <div className="acct-stats">
+          <div className="acct-stat">
+            <strong>{bids.length}</strong>
+            <span>Total bids</span>
+          </div>
+          <div className="acct-stat acct-stat--good">
+            <strong>{counts.winning}</strong>
+            <span>Winning</span>
+          </div>
+          <div className="acct-stat acct-stat--bad">
+            <strong>{counts.outbid}</strong>
+            <span>Outbid</span>
+          </div>
+          <div className="acct-stat acct-stat--info">
+            <strong>{counts.allotted}</strong>
+            <span>Allotted to you</span>
           </div>
         </div>
 
-        <div className="account-section">
-          <div className="section-title-row">
-            <h2>Submitted Bids</h2>
-            <button className="btn-refresh" onClick={() => fetchMyBids(true)}>
-              🔄 Refresh Bids
-            </button>
+        {error && <div className="wl-notice wl-notice-error">{error}</div>}
+
+        {loading ? (
+          <div className="wl-loading-block">
+            <div className="wl-spinner" />
+            Loading your bids…
           </div>
-
-          {loading && <div className="account-loading">Loading your submitted bids...</div>}
-          {error && <div className="account-error">{error}</div>}
-
-          {!loading && !error && bids.length === 0 && (
-            <div className="no-bids-card">
-              <h3>No Submitted Bids Yet</h3>
-              <p>You haven't placed any bids on active liquidation lots yet.</p>
-              <Link to="/products" className="btn-browse-lots">
-                Browse Live Auctions & Bid Now
+        ) : bids.length === 0 && !error ? (
+          <div className="wl-empty">
+            <h3>No bids yet</h3>
+            <p>You have not placed any bids. Browse the live auctions and place your first bid.</p>
+            <div className="wl-empty-actions">
+              <Link to="/products" className="wl-btn wl-btn-primary">
+                Browse Live Auctions
+              </Link>
+              <Link to="/marketplaces" className="wl-btn wl-btn-secondary">
+                Browse Marketplaces
               </Link>
             </div>
-          )}
+          </div>
+        ) : (
+          <>
+            <div className="acct-tabs" role="tablist" aria-label="Filter bids by status">
+              {TABS.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.id}
+                  className={`acct-tab ${tab === t.id ? 'active' : ''}`}
+                  onClick={() => setTab(t.id)}
+                >
+                  {t.label}
+                  <span className="acct-tab__count">{counts[t.id]}</span>
+                </button>
+              ))}
+            </div>
 
-          {!loading && !error && bids.length > 0 && (
-            <div className="bids-grid">
-              {bids.map((bid) => {
-                const isWinning = bid.status === 'Winning'
-                const info = allotments[bid.lotId]
-                const allotted = !!info?.allotment
-                const allottedToMe = !!info?.allottedToMe
-                const timerDone = !!info?.ourTimerEnded || !!info?.manuallyEnded
-                return (
-                  <div key={bid.lotId} className={`bid-card ${allotted ? (allottedToMe ? 'card-winning' : 'card-losing') : (isWinning ? 'card-winning' : 'card-losing')}`}>
-                    <div className="bid-card-header">
-                      <span className={`status-badge ${allotted ? (allottedToMe ? 'badge-allotted' : 'badge-losing') : (isWinning ? 'badge-winning' : 'badge-losing')}`}>
-                        {allotted
-                          ? (allottedToMe ? '🎉 ALLOTTED TO YOU' : '📌 ALLOTTED TO OTHER')
-                          : (isWinning ? '🟢 WINNING' : '🔴 OUTBID / LOSING')}
-                      </span>
-                      <span className="bid-time-ago">
-                        Last Bid: {new Date(bid.lastBidTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {/* Bid allotment status: visible after our timer runs out */}
-                    {info && (
-                      <div className={`allot-banner ${allotted ? (allottedToMe ? 'allot-won' : 'allot-lost') : (timerDone ? 'allot-pending' : 'allot-live')}`}>
-                        {allotted && allottedToMe && (
-                          <>🎉 <strong>BID ALLOTTED TO YOU</strong> at {formatRawMoney(info.allotment.allottedAmount)}</>
+            {visible.length === 0 ? (
+              <div className="wl-empty">
+                <h3>Nothing here</h3>
+                <p>No bids in this status yet.</p>
+              </div>
+            ) : (
+              <div className="acct-grid">
+                {visible.map(({ bid, info, allotted, allottedToMe, isWinning }) => {
+                  const timerDone = !!info?.ourTimerEnded || !!info?.manuallyEnded
+                  return (
+                    <div key={bid.lotId} className="acct-card">
+                      <div className="acct-card__top">
+                        {allotted ? (
+                          allottedToMe
+                            ? <span className="wl-badge wl-badge-success">Allotted to you</span>
+                            : <span className="wl-badge">Allotted to another bidder</span>
+                        ) : (
+                          isWinning
+                            ? <span className="wl-badge wl-badge-success">Winning</span>
+                            : <span className="wl-badge wl-badge-danger">Outbid</span>
                         )}
-                        {allotted && !allottedToMe && (
-                          <>📌 <strong>Bid allotted</strong> to another bidder — better luck next time.</>
-                        )}
-                        {!allotted && timerDone && (
-                          <>⏳ <strong>Bidding time done</strong> — allotment pending, check back soon.</>
-                        )}
-                        {!allotted && !timerDone && (
-                          <>⏱ <strong>Bidding live</strong> — allotment happens after the timer runs out.</>
-                        )}
+                        <span className="acct-card__time">
+                          Last bid {new Date(bid.lastBidTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
                       </div>
-                    )}
 
-                    <div className="bid-card-body">
-                      {bid.lotImageUrl && (
-                        <img src={bid.lotImageUrl} alt={bid.lotName} className="bid-lot-thumb" />
-                      )}
-                      <div className="bid-lot-info">
-                        <h3>{bid.lotName}</h3>
-                        <p className="lot-id-sub">Lot ID: {bid.lotId}</p>
+                      <div className="acct-card__body">
+                        {bid.lotImageUrl && (
+                          <img src={bid.lotImageUrl} alt="" className="acct-card__thumb" loading="lazy" />
+                        )}
+                        <div>
+                          <h3>{bid.lotName}</h3>
+                          <p className="acct-card__lotid">Lot ID: {bid.lotId}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="bid-timer-container">
                       <LotTimer endDate={bid.endDate} />
-                    </div>
 
-                    <div className="bid-amounts-row">
-                      <div className="amount-block">
-                        <span className="amount-label">Your Highest Bid</span>
-                        <strong className="amount-val user-val">{formatRawMoney(bid.userHighestBid)}</strong>
-                      </div>
-                      <div className="amount-block">
-                        <span className="amount-label">Current Top Bid</span>
-                        <strong className="amount-val top-val">{formatRawMoney(bid.topBidAmount)}</strong>
-                      </div>
-                    </div>
+                      {!allotted && timerDone && (
+                        <p className="acct-card__note">Bidding ended — allotment pending, check back soon.</p>
+                      )}
 
-                    <div className="bid-card-footer">
-                      <Link to={`/product_detail/${bid.lotId}`} className="btn-view-product">
-                        {allotted
-                          ? (allottedToMe ? 'View Allotted Lot →' : 'View Lot Details →')
-                          : (isWinning ? 'View Lot Details →' : '⚡ Increase Bid Now →')}
+                      <div className="acct-card__amounts">
+                        <div>
+                          <span>Your highest bid</span>
+                          <strong>{formatRawMoney(bid.userHighestBid)}</strong>
+                        </div>
+                        <div>
+                          <span>Current top bid</span>
+                          <strong>{formatRawMoney(bid.topBidAmount)}</strong>
+                        </div>
+                      </div>
+
+                      <Link to={`/product_detail/${bid.lotId}`} className="wl-btn wl-btn-secondary wl-btn-block wl-btn-sm">
+                        {allottedToMe ? 'View Allotted Lot →' : isWinning ? 'View Lot →' : 'Increase Bid →'}
                       </Link>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
+        )}
       </main>
 
-      <footer className="footer">
-        <div className="footer-brand">
-          <div className="brand-logo footer-logo" role="img" aria-label="wholelot traders">
-            <span className="brand-text">wholelot</span>
-            <span className="brand-text-second">traders</span>
-          </div>
-        </div>
-        <div className="footer-contact">
-          <p>📞 1800-419-0431</p>
-          <p>✉ support@wholelottraders.com</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }

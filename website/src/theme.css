@@ -1,0 +1,622 @@
+/* ==========================================================================
+   WHOLELOT TRADERS — SITE-WIDE DESIGN SYSTEM (buyer pages)
+   Same tokens as the landing page: white theme, Inter, blue brand.
+   Landing page keeps its own scoped stylesheet; these classes are for
+   the shop, marketplaces, product detail, account, and auth pages.
+   ========================================================================== */
+
+:root {
+  --wl-bg: #ffffff;
+  --wl-bg-alt: #f8fafc;
+  --wl-ink: #0f172a;
+  --wl-body: #475569;
+  --wl-muted: #64748b;
+  --wl-line: #e2e8f0;
+  --wl-line-dark: #cbd5e1;
+  --wl-brand: #1d4ed8;
+  --wl-brand-dark: #1e3a8a;
+  --wl-brand-soft: #eff6ff;
+  --wl-radius: 8px;
+
+  --wl-success: #15803d;
+  --wl-success-bg: #f0fdf4;
+  --wl-success-line: #bbf7d0;
+  --wl-danger: #b91c1c;
+  --wl-danger-bg: #fef2f2;
+  --wl-danger-line: #fecaca;
+  --wl-warning: #92400e;
+  --wl-warning-bg: #fffbeb;
+  --wl-warning-line: #fde68a;
+  --wl-info: #1e40af;
+  --wl-info-bg: #eff6ff;
+  --wl-info-line: #bfdbfe;
+}
+
+.wl-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--wl-bg-alt);
+  color: var(--wl-body);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wl-page h1,
+.wl-page h2,
+.wl-page h3,
+.wl-page h4 {
+  color: var(--wl-ink);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.wl-page p {
+  margin: 0;
+}
+
+.wl-container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.wl-main {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 20px 48px;
+}
+
+/* ---------- Breadcrumb ---------- */
+.wl-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--wl-muted);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.wl-breadcrumb a,
+.wl-breadcrumb button.wl-crumb-link {
+  color: var(--wl-brand);
+  text-decoration: none;
+  font-weight: 500;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.wl-breadcrumb a:hover,
+.wl-breadcrumb button.wl-crumb-link:hover {
+  text-decoration: underline;
+}
+
+.wl-breadcrumb .wl-crumb-sep {
+  color: var(--wl-line-dark);
+}
+
+.wl-breadcrumb .wl-crumb-current {
+  color: var(--wl-ink);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 420px;
+}
+
+/* ---------- Page head ---------- */
+.wl-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.wl-page-head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.wl-page-head .wl-sub {
+  font-size: 14px;
+  color: var(--wl-muted);
+  margin-top: 4px;
+}
+
+.wl-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--wl-line);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wl-ink);
+  white-space: nowrap;
+}
+
+.wl-count-pill .wl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #16a34a;
+}
+
+/* ---------- Buttons ---------- */
+.wl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--wl-radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-family: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.wl-btn-primary {
+  background: var(--wl-brand);
+  color: #fff;
+}
+
+.wl-btn-primary:hover:not(:disabled) {
+  background: var(--wl-brand-dark);
+}
+
+.wl-btn-secondary {
+  background: #fff;
+  color: var(--wl-ink);
+  border-color: var(--wl-line-dark);
+}
+
+.wl-btn-secondary:hover:not(:disabled) {
+  border-color: var(--wl-ink);
+}
+
+.wl-btn-sm {
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.wl-btn-block {
+  width: 100%;
+}
+
+.wl-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------- Inputs ---------- */
+.wl-input,
+.wl-select {
+  border: 1px solid var(--wl-line-dark);
+  border-radius: var(--wl-radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--wl-ink);
+  background: #fff;
+  width: 100%;
+}
+
+.wl-input:focus,
+.wl-select:focus {
+  outline: 2px solid var(--wl-brand);
+  outline-offset: -1px;
+  border-color: var(--wl-brand);
+}
+
+.wl-select {
+  width: auto;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.wl-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wl-field > label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wl-ink);
+}
+
+/* ---------- Badges & chips ---------- */
+.wl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--wl-line);
+  background: var(--wl-bg-alt);
+  color: var(--wl-body);
+  white-space: nowrap;
+}
+
+.wl-badge-brand {
+  background: var(--wl-brand-soft);
+  border-color: var(--wl-info-line);
+  color: var(--wl-brand);
+}
+
+.wl-badge-success {
+  background: var(--wl-success-bg);
+  border-color: var(--wl-success-line);
+  color: var(--wl-success);
+}
+
+.wl-badge-danger {
+  background: var(--wl-danger-bg);
+  border-color: var(--wl-danger-line);
+  color: var(--wl-danger);
+}
+
+.wl-badge-warning {
+  background: var(--wl-warning-bg);
+  border-color: var(--wl-warning-line);
+  color: var(--wl-warning);
+}
+
+.wl-badge-info {
+  background: var(--wl-info-bg);
+  border-color: var(--wl-info-line);
+  color: var(--wl-info);
+}
+
+.wl-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: var(--wl-warning-bg);
+  border: 1px solid var(--wl-warning-line);
+  color: var(--wl-warning);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.wl-timer-badge.ended {
+  background: var(--wl-danger-bg);
+  border-color: var(--wl-danger-line);
+  color: var(--wl-danger);
+}
+
+/* Active filter chips */
+.wl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.wl-chips:empty {
+  display: none;
+}
+
+.wl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #fff;
+  border: 1px solid var(--wl-line-dark);
+  border-radius: 20px;
+  padding: 5px 8px 5px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--wl-ink);
+}
+
+.wl-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--wl-bg-alt);
+  color: var(--wl-muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wl-chip button:hover {
+  background: var(--wl-danger-bg);
+  color: var(--wl-danger);
+}
+
+.wl-chip-clear {
+  background: none;
+  border: none;
+  color: var(--wl-brand);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 8px;
+  font-family: inherit;
+}
+
+.wl-chip-clear:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Cards ---------- */
+.wl-card {
+  background: #fff;
+  border: 1px solid var(--wl-line);
+  border-radius: 12px;
+}
+
+/* ---------- Notices ---------- */
+.wl-notice {
+  border-radius: var(--wl-radius);
+  padding: 12px 16px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid;
+}
+
+.wl-notice-error {
+  background: var(--wl-danger-bg);
+  border-color: var(--wl-danger-line);
+  color: var(--wl-danger);
+}
+
+.wl-notice-success {
+  background: var(--wl-success-bg);
+  border-color: var(--wl-success-line);
+  color: var(--wl-success);
+}
+
+.wl-notice-info {
+  background: var(--wl-info-bg);
+  border-color: var(--wl-info-line);
+  color: var(--wl-info);
+}
+
+/* ---------- Empty state ---------- */
+.wl-empty {
+  background: #fff;
+  border: 1px dashed var(--wl-line-dark);
+  border-radius: 12px;
+  padding: 56px 24px;
+  text-align: center;
+}
+
+.wl-empty h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.wl-empty p {
+  color: var(--wl-muted);
+  margin-bottom: 20px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wl-empty-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- Skeleton loading ---------- */
+.wl-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #eef2f7;
+  border-radius: 6px;
+}
+
+.wl-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: wl-shimmer 1.4s infinite;
+}
+
+@keyframes wl-shimmer {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+
+.wl-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--wl-line);
+  border-top-color: var(--wl-brand);
+  border-radius: 50%;
+  animation: wl-spin 0.9s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes wl-spin {
+  to { transform: rotate(360deg); }
+}
+
+.wl-loading-block {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--wl-muted);
+  background: #fff;
+  border: 1px solid var(--wl-line);
+  border-radius: 12px;
+}
+
+/* ---------- Pagination ---------- */
+.wl-pagination {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 12px;
+  flex-wrap: wrap;
+}
+
+.wl-pagination button {
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: var(--wl-radius);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--wl-body);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.wl-pagination button:hover:not(:disabled):not(.active) {
+  border-color: var(--wl-line-dark);
+}
+
+.wl-pagination button.active {
+  background: var(--wl-ink);
+  color: #fff;
+  font-weight: 700;
+}
+
+.wl-pagination button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.wl-pagination .wl-page-label {
+  font-size: 13px;
+  color: var(--wl-muted);
+  margin-left: 10px;
+}
+
+/* ---------- WhatsApp FAB ---------- */
+.whatsapp-fab {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #22c35e;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+  z-index: 40;
+}
+
+.whatsapp-fab:hover {
+  background: #1da851;
+}
+
+/* ---------- Auth pages ---------- */
+.wl-auth-wrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 48px 16px;
+}
+
+.wl-auth-card {
+  background: #fff;
+  width: 100%;
+  max-width: 560px;
+  padding: 36px 40px;
+  border-radius: 12px;
+  border: 1px solid var(--wl-line);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+
+.wl-auth-card.wide {
+  max-width: 860px;
+}
+
+.wl-auth-card h1 {
+  font-size: 24px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.wl-auth-card .wl-auth-sub {
+  text-align: center;
+  color: var(--wl-muted);
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.wl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wl-form-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .wl-main {
+    padding: 14px 14px 36px;
+  }
+
+  .wl-container {
+    padding: 0 14px;
+  }
+
+  .wl-auth-card {
+    padding: 28px 20px;
+  }
+
+  .wl-form-2col {
+    grid-template-columns: 1fr;
+  }
+
+  .wl-breadcrumb .wl-crumb-current {
+    max-width: 200px;
+  }
+}

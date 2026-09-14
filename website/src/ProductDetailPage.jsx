@@ -3,19 +3,22 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { usePrice } from './usePrice'
 import { useUser } from './UserContext'
 import { displayCity } from './displayCity'
-import Header from './Header'
-import './ProductDetailPage.css'
+import SiteHeader, { SiteFooter } from './SiteChrome'
+import './theme.css'
+import './ProductDetail.css'
 
 const TIMER_OFFSET_SECONDS_FALLBACK = 60 * 60
 
 function formatTime(seconds) {
-  if (!seconds || seconds <= 0) return '0 Hr 00 Min 00 Sec'
+  if (!seconds || seconds <= 0) return 'Ended'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
   const s = Math.floor(seconds % 60)
-  const mStr = String(m).padStart(2, '0')
-  const sStr = String(s).padStart(2, '0')
-  return `${h} Hr ${mStr} Min ${sStr} Sec`
+  if (h >= 48) {
+    const d = Math.floor(h / 24)
+    return `${d}d ${h % 24}h ${String(m).padStart(2, '0')}m`
+  }
+  return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
 }
 
 export default function ProductDetailPage() {
@@ -25,7 +28,6 @@ export default function ProductDetailPage() {
   const timerOffset = Number.isFinite(timerOffsetSeconds) ? timerOffsetSeconds : TIMER_OFFSET_SECONDS_FALLBACK
   const { user, openSignInModal } = useUser()
 
-  // Extract pure ID if slug is included in path
   const lotId = paramId || ''
 
   const [lotSummary, setLotSummary] = useState(null)
@@ -55,7 +57,6 @@ export default function ProductDetailPage() {
     userStatus: 'None'
   })
 
-  // Allotment for this lot (visible after our timer runs out)
   const [allotInfo, setAllotInfo] = useState(null)
   const [biddingClosedEarly, setBiddingClosedEarly] = useState(false)
 
@@ -87,7 +88,6 @@ export default function ProductDetailPage() {
   const [copied, setCopied] = useState(false)
   const [downloadingManifest, setDownloadingManifest] = useState(false)
 
-  // Fetch Live Bid status for this lot
   const fetchLotBids = async () => {
     if (!lotId) return
     try {
@@ -106,7 +106,6 @@ export default function ProductDetailPage() {
     fetchLotBids()
   }, [lotId, user])
 
-  // Fetch Lot Details
   useEffect(() => {
     if (!lotId) return
 
@@ -138,7 +137,6 @@ export default function ProductDetailPage() {
     fetchDetails()
   }, [lotId, timerOffset])
 
-  // Fetch Inventories (Manifest items)
   useEffect(() => {
     if (!lotId) return
 
@@ -163,7 +161,6 @@ export default function ProductDetailPage() {
     fetchInventories()
   }, [lotId, inventoryPage])
 
-  // Countdown timer
   useEffect(() => {
     if (remainingTime <= 0) return
     const timer = setInterval(() => {
@@ -240,7 +237,7 @@ export default function ProductDetailPage() {
     setBiddingError('')
 
     if (biddingClosedEarly) {
-      setBiddingError('Bidding for this lot was ended by the admin.')
+      setBiddingError('Bidding for this lot has ended.')
       return
     }
 
@@ -260,16 +257,11 @@ export default function ProductDetailPage() {
       return
     }
 
-    // Bids must be in multiples of 1000 (1000, 2000, 3000, ...)
     if (numBid % 1000 !== 0) {
       setBiddingError('Bid amount must be in multiples of ₹1,000 (e.g. 1000, 2000, 3000)')
       return
     }
 
-    // Minimum bid is one ₹1,000 increment above the HIKED floor price
-    // (default/range hike applied, rounded up to the next ₹1,000 first) —
-    // a bid exactly at the floor price is not enough.
-    // Matches the placeholder and what the backend enforces.
     const minRequired = lotSummary?.floor_price
       ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000
       : 0
@@ -320,275 +312,264 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="pdp-page">
-        <Header />
-        <div className="pdp-loading">
-          <div className="spinner"></div>
-          <p>Loading product details...</p>
-        </div>
+      <div className="wl-page">
+        <SiteHeader />
+        <main className="wl-main">
+          <div className="pdp-layout">
+            <div>
+              <div className="wl-skeleton" style={{ height: 420, borderRadius: 12 }} />
+              <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="wl-skeleton" style={{ width: 72, height: 72, borderRadius: 8 }} />
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="wl-skeleton" style={{ height: 28, width: '85%' }} />
+              <div className="wl-skeleton" style={{ height: 18, width: '50%' }} />
+              <div className="wl-skeleton" style={{ height: 120 }} />
+              <div className="wl-skeleton" style={{ height: 180 }} />
+            </div>
+          </div>
+        </main>
+        <SiteFooter />
       </div>
     )
   }
 
   if (error || !lotSummary) {
     return (
-      <div className="pdp-page">
-        <Header />
-        <div className="pdp-error-container">
-          <h2>Product Not Found</h2>
-          <p>{error || 'The requested product could not be loaded.'}</p>
-          <button className="btn-back" onClick={() => navigate(-1)}>← Back to Products</button>
-        </div>
+      <div className="wl-page">
+        <SiteHeader />
+        <main className="wl-main">
+          <div className="wl-empty">
+            <h3>Lot not found</h3>
+            <p>{error || 'This lot may have been removed or the link is incorrect.'}</p>
+            <div className="wl-empty-actions">
+              <button type="button" className="wl-btn wl-btn-secondary" onClick={() => navigate(-1)}>
+                ← Go back
+              </button>
+              <Link to="/products" className="wl-btn wl-btn-primary">
+                Browse all auctions
+              </Link>
+            </div>
+          </div>
+        </main>
+        <SiteFooter />
       </div>
     )
   }
 
   const images = lotSummary.lot_image_urls && lotSummary.lot_image_urls.length > 0
     ? lotSummary.lot_image_urls
-    : ['https://via.placeholder.com/400x300?text=No+Image']
-
+    : []
   const currentImage = images[selectedImgIndex] || images[0]
+  const backPath = orgName ? `/${orgName}/products` : '/products'
+  const minBid = Math.max(
+    lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000 : 0,
+    bidStatusInfo.topBidAmount || 0
+  )
 
   return (
-    <div className="pdp-page">
-      <Header />
+    <div className="wl-page">
+      <SiteHeader />
 
-      <div className="pdp-breadcrumb">
-        <button type="button" className="breadcrumb-back-btn" onClick={() => navigate(-1)}>
-          ← Back to Products
-        </button>
-        <span className="breadcrumb-separator">/</span>
-        <span className="breadcrumb-current">{lotSummary.lot_name}</span>
-      </div>
+      <main className="wl-main">
+        <nav className="wl-breadcrumb" aria-label="Breadcrumb">
+          <Link to="/">Home</Link>
+          <span className="wl-crumb-sep">/</span>
+          {orgName ? (
+            <>
+              <Link to="/marketplaces">Marketplaces</Link>
+              <span className="wl-crumb-sep">/</span>
+              <Link to={backPath}>{orgName}</Link>
+              <span className="wl-crumb-sep">/</span>
+            </>
+          ) : (
+            <>
+              <Link to="/products">All Auctions</Link>
+              <span className="wl-crumb-sep">/</span>
+            </>
+          )}
+          <span className="wl-crumb-current">{lotSummary.lot_name}</span>
+        </nav>
 
-      <main className="pdp-main">
-        {/* TOP HERO SECTION: GALLERY + PRODUCT SPECS & BIDDING */}
-        <div className="pdp-hero-grid">
-          {/* LEFT: Image Gallery */}
+        <div className="pdp-layout">
           <div className="pdp-gallery">
-            <div className="main-image-wrapper">
-              <img src={currentImage} alt={lotSummary.lot_name} className="main-image" />
+            <div className="pdp-gallery__main">
+              {currentImage ? (
+                <img src={currentImage} alt={lotSummary.lot_name} />
+              ) : (
+                <div className="pdp-gallery__placeholder">No image available</div>
+              )}
               {lotSummary.org_image_url && (
-                <img src={lotSummary.org_image_url} alt="org_logo" className="pdp-org-badge" />
+                <img src={lotSummary.org_image_url} alt="" className="pdp-gallery__org" />
               )}
             </div>
             {images.length > 1 && (
-              <div className="thumbnails-row">
+              <div className="pdp-gallery__thumbs">
                 {images.map((img, idx) => (
                   <button
                     key={idx}
                     type="button"
-                    className={`thumb-btn ${idx === selectedImgIndex ? 'active' : ''}`}
+                    className={`pdp-thumb ${idx === selectedImgIndex ? 'active' : ''}`}
                     onClick={() => setSelectedImgIndex(idx)}
+                    aria-label={`View image ${idx + 1}`}
                   >
-                    <img src={img} alt={`thumb-${idx}`} />
+                    <img src={img} alt="" loading="lazy" />
                   </button>
                 ))}
               </div>
             )}
+
+            <div className="pdp-facts">
+              <div className="pdp-fact">
+                <span>Quantity</span>
+                <strong>{lotSummary.items_count} items</strong>
+              </div>
+              <div className="pdp-fact">
+                <span>MRP</span>
+                <strong>{formatRawMoney(lotSummary.mrp)}</strong>
+              </div>
+              <div className="pdp-fact">
+                <span>Location</span>
+                <strong>{displayCity(lotSummary.storage_location)}</strong>
+              </div>
+              <div className="pdp-fact">
+                <span>Condition</span>
+                <strong>{lotSummary.grade_name}</strong>
+              </div>
+            </div>
           </div>
 
-          {/* RIGHT: Product Details & Action Box */}
-          <div className="pdp-info">
-            {/* Display the upstream countdown one hour earlier for each active lot. */}
-            {biddingClosedEarly ? (
-              <div className="pdp-timer-badge">
-                ⏱ 0 Hr 00 Min 00 Sec — bidding ended
-              </div>
-            ) : (
-              remainingTime > 0 && (
-                <div className="pdp-timer-badge">
-                  ⏱ {formatTime(remainingTime)}
-                </div>
-              )
-            )}
-
-            <h1 className="pdp-title">{lotSummary.lot_name}</h1>
-
-            <div className="pdp-meta-tags">
-              <span className="tag-location">📍 {displayCity(lotSummary.storage_location)}</span>
-              <span className="tag-grade">{lotSummary.grade_name}</span>
-            </div>
-
-            <div className="pdp-specs-box">
-              <div className="pdp-spec-item">
-                <span className="spec-label">Quantity</span>
-                <strong className="spec-val">{lotSummary.items_count} items</strong>
-              </div>
-              <div className="pdp-spec-item">
-                <span className="spec-label">MRP</span>
-                <strong className="spec-val">{formatRawMoney(lotSummary.mrp)}</strong>
-              </div>
-              <div className="pdp-spec-item">
-                <span className="spec-label">Floor Price</span>
-                <strong className="spec-val highlight-price">{formatMoney(lotSummary.floor_price)}</strong>
-              </div>
-            </div>
-
-            {/* Bidding & Live Status Card */}
-            <div className="pdp-actions-card">
-              {bidStatusInfo.topBidAmount > 0 && (
-                <div className="pdp-topbid-banner">
-                  <span>Current Highest Bid:</span>
-                  <strong>{formatRawMoney(bidStatusInfo.topBidAmount)}</strong>
-                </div>
+          <div className="pdp-buybox">
+            <div className="pdp-buybox__main">
+              {biddingClosedEarly ? (
+                <span className="wl-timer-badge ended">Bidding ended</span>
+              ) : remainingTime > 0 ? (
+                <span className="wl-timer-badge">Ends in {formatTime(remainingTime)}</span>
+              ) : (
+                <span className="wl-timer-badge ended">Bidding ended</span>
               )}
 
+              <h1 className="pdp-title">{lotSummary.lot_name}</h1>
+
+              <div className="pdp-price-block">
+                <div className="pdp-price-row">
+                  <span className="pdp-price-label">Floor Price</span>
+                  <strong className="pdp-price-floor">{formatMoney(lotSummary.floor_price)}</strong>
+                </div>
+                {bidStatusInfo.topBidAmount > 0 && (
+                  <div className="pdp-price-row">
+                    <span className="pdp-price-label">Current Highest Bid</span>
+                    <strong className="pdp-price-top">{formatRawMoney(bidStatusInfo.topBidAmount)}</strong>
+                  </div>
+                )}
+                {bidStatusInfo.totalBidsCount > 0 && (
+                  <span className="pdp-bid-count">
+                    {bidStatusInfo.totalBidsCount} bid{bidStatusInfo.totalBidsCount === 1 ? '' : 's'} placed
+                  </span>
+                )}
+              </div>
+
               {user && bidStatusInfo.userStatus !== 'None' && (
-                <div className={`pdp-user-status-banner ${bidStatusInfo.userStatus === 'Winning' ? 'banner-winning' : 'banner-losing'}`}>
+                <div className={`pdp-status ${bidStatusInfo.userStatus === 'Winning' ? 'pdp-status--winning' : 'pdp-status--losing'}`}>
                   {bidStatusInfo.userStatus === 'Winning' ? (
-                    <>🟢 <strong>YOU ARE WINNING!</strong> Your highest bid: {formatRawMoney(bidStatusInfo.userHighestBid)}</>
+                    <>You are winning with {formatRawMoney(bidStatusInfo.userHighestBid)}</>
                   ) : (
-                    <>🔴 <strong>YOU ARE OUTBID / LOSING!</strong> Your bid: {formatRawMoney(bidStatusInfo.userHighestBid)} (Top bid: {formatRawMoney(bidStatusInfo.topBidAmount)})</>
+                    <>You are outbid. Your bid: {formatRawMoney(bidStatusInfo.userHighestBid)} · Top: {formatRawMoney(bidStatusInfo.topBidAmount)}</>
                   )}
                 </div>
               )}
 
-              {/* Allotment result, shown after our timer runs out and admin assigns */}
               {allotInfo && user && (
-                <div className={`pdp-user-status-banner ${allotInfo.allottedToEmail === user.email?.toLowerCase() ? 'banner-winning' : 'banner-losing'}`}>
+                <div className={`pdp-status ${allotInfo.allottedToEmail === user.email?.toLowerCase() ? 'pdp-status--winning' : 'pdp-status--losing'}`}>
                   {allotInfo.allottedToEmail === user.email?.toLowerCase() ? (
-                    <>🎉 <strong>BID ALLOTTED TO YOU</strong> at {formatRawMoney(allotInfo.allottedAmount)}</>
+                    <>Allotted to you at {formatRawMoney(allotInfo.allottedAmount)}</>
                   ) : (
-                    <>📌 <strong>Bid allotted</strong> — this lot went to another bidder.</>
+                    <>This lot was allotted to another bidder.</>
                   )}
                 </div>
               )}
               {allotInfo && !user && (
-                <div className="pdp-user-status-banner banner-losing">
-                  📌 <strong>Bid allotted</strong> — bidding is closed for this lot.
+                <div className="pdp-status pdp-status--losing">
+                  Bidding is closed for this lot — it has been allotted.
                 </div>
               )}
 
               <form className="pdp-bid-form" onSubmit={handleBidSubmit}>
-                <label htmlFor="bid-input" className="bid-label">
-                  Enter Your Bid Amount {user ? `(as ${user.email})` : ''}
+                <label htmlFor="bid-input">
+                  Your bid {user ? <span className="pdp-bid-as">as {user.email}</span> : null}
                 </label>
-                <div className="bid-input-group">
-                  <span className="currency-prefix">₹</span>
+                <div className="pdp-bid-row">
+                  <span className="pdp-bid-prefix">₹</span>
                   <input
                     id="bid-input"
                     type="number"
                     step="1000"
                     min="0"
-                    placeholder={`Min. ${formatRawMoney(Math.max(lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000 : 0, bidStatusInfo.topBidAmount || 0))}`}
+                    placeholder={`Min. ${formatRawMoney(minBid)}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
                     disabled={biddingClosedEarly}
                   />
-                  <button type="submit" className="btn-submit-bid" disabled={submittingBid || biddingClosedEarly}>
-                    {biddingClosedEarly ? 'BIDDING ENDED' : submittingBid ? 'SUBMITTING...' : 'SUBMIT BID'}
-                  </button>
                 </div>
-                <p className="bid-hint">Bids must be in multiples of ₹1,000</p>
+                <button type="submit" className="wl-btn wl-btn-primary wl-btn-block" disabled={submittingBid || biddingClosedEarly}>
+                  {biddingClosedEarly ? 'Bidding Ended' : submittingBid ? 'Placing Bid…' : 'Place Bid'}
+                </button>
+                <p className="pdp-bid-hint">Bids must be in multiples of ₹1,000 · Minimum {formatRawMoney(minBid)}</p>
 
-                {biddingError && (
-                  <div className="pdp-bid-error">{biddingError}</div>
-                )}
-
-                {bidSubmitted && (
-                  <div className="pdp-bid-alert">✅ Your bid has been successfully placed in real-time!</div>
-                )}
+                {biddingError && <div className="wl-notice wl-notice-error" style={{ marginBottom: 0 }}>{biddingError}</div>}
+                {bidSubmitted && <div className="wl-notice wl-notice-success" style={{ marginBottom: 0 }}>Your bid was placed successfully.</div>}
               </form>
 
-              {bidStatusInfo.topBidAmount > 0 && (
-                <div className="pdp-buynow-row">
-                  <button type="button" className="btn-buy-now">
-                    Buy @ {formatMoney(bidStatusInfo.topBidAmount)}
+              <div className="pdp-secondary-actions">
+                <button type="button" className="wl-btn wl-btn-secondary wl-btn-sm" onClick={handleShare}>
+                  {copied ? 'Link Copied' : 'Share Lot'}
+                </button>
+                <button
+                  type="button"
+                  className="wl-btn wl-btn-secondary wl-btn-sm"
+                  onClick={handleDownloadManifest}
+                  disabled={downloadingManifest}
+                >
+                  {downloadingManifest ? 'Downloading…' : 'Download Manifest'}
+                </button>
+              </div>
+
+              {!user && (
+                <div className="pdp-signin-nudge">
+                  <button type="button" className="wl-chip-clear" onClick={openSignInModal}>
+                    Sign in to bid on this lot →
                   </button>
                 </div>
               )}
-
-              <div className="pdp-share-row">
-                <button type="button" className="btn-share" onClick={handleShare}>
-                  🔗 {copied ? 'LINK COPIED!' : 'SHARE'}
-                </button>
-              </div>
             </div>
 
-            {/* Feedback section */}
-            <div className="pdp-feedback-box">
-              <h3>INTERESTED IN THE LOT BUT NOT BIDDING?</h3>
-              <p className="feedback-subtitle">PLEASE LET US KNOW WHY...</p>
-
-              {feedbackSubmitted ? (
-                <div className="feedback-thanks">Thank you for your feedback!</div>
-              ) : (
-                <form onSubmit={handleFeedbackSubmit}>
-                  <div className="feedback-options-grid">
-                    {[
-                      'Lot too small',
-                      'Lot too large',
-                      'Logistics cost is too high',
-                      'Lot mix not good',
-                      'Manifest not clear',
-                      'No grading details',
-                      'Pricing not attractive'
-                    ].map((reason) => (
-                      <label key={reason} className="feedback-option">
-                        <input
-                          type="radio"
-                          name="feedback-reason"
-                          value={reason}
-                          checked={selectedReason === reason}
-                          onChange={(e) => setSelectedReason(e.target.value)}
-                        />
-                        <span>{reason}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button type="submit" className="btn-submit-feedback" disabled={!selectedReason}>
-                    Submit Feedback
-                  </button>
-                </form>
-              )}
+            <div className="pdp-trust">
+              <div className="pdp-trust__item">
+                <strong>Itemized manifest</strong>
+                <span>Every SKU listed before you bid</span>
+              </div>
+              <div className="pdp-trust__item">
+                <strong>Stated condition</strong>
+                <span>{lotSummary.grade_name} grade on this lot</span>
+              </div>
+              <div className="pdp-trust__item">
+                <strong>Open bidding</strong>
+                <span>Visible bid history, highest wins</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* INFORMATIONAL CARDS SECTION */}
-        <div className="pdp-info-cards">
-          <section className="pdp-card">
-            <h2>CONDITION TYPE</h2>
-            <p>
-              <strong>{lotSummary.grade_name}</strong> - The item shows normal marks from consistent use,
-              but it remains in good condition and works fully. It may show other signs of previous ownership.
-            </p>
-          </section>
-
-          <section className="pdp-card">
-            <h2>TERMS OF PURCHASE</h2>
-            <p>
-              WholeLot Traders is an intermediary that provides a platform through which Buyers may purchase
-              Inventory from Sellers. All sales are subject to standard auction terms and conditions.
-            </p>
-          </section>
-
-          <section className="pdp-card">
-            <h2>FAQ's</h2>
-            <p>
-              <strong>Applying and Logging In:</strong> How do I register as a buyer? Registration is free and
-              allows you to participate in all live auctions across marketplaces.
-            </p>
-          </section>
-
-          <section className="pdp-card">
-            <h2>ADDITIONAL INFO</h2>
-            <p>
-              <strong>Lot Description:</strong> {lotSummary.lot_description || 'Delivery between 2 to 3 working days after full payment.'}
-            </p>
-          </section>
-        </div>
-
-        {/* LOT DETAILS: TOP BRAND & TOP CATEGORY */}
-        <div className="pdp-tables-section">
-          <h2>LOT DETAILS</h2>
-          <div className="pdp-breakdown-grid">
-            {/* TOP BRAND TABLE */}
-            <div className="breakdown-card">
-              <h3>TOP BRAND</h3>
+        <section className="pdp-section">
+          <h2>Lot details</h2>
+          <div className="pdp-breakdown">
+            <div className="pdp-table-card">
+              <h3>Top brands</h3>
               {topBrand && topBrand.length > 0 ? (
-                <table className="breakdown-table">
+                <table className="pdp-table">
                   <thead>
                     <tr>
                       <th>Brand</th>
@@ -599,7 +580,7 @@ export default function ProductDetailPage() {
                   <tbody>
                     {topBrand.map((item, idx) => (
                       <tr key={idx}>
-                        <td className="brand-name-cell">{item.brand_name?.toUpperCase() || 'UNKNOWN'}</td>
+                        <td className="pdp-table__brand">{item.brand_name?.toUpperCase() || 'UNKNOWN'}</td>
                         <td>{item.item_count} ({item.item_percentage}%)</td>
                         <td>{formatRawMoney(item.sum)} ({item.percentage}%)</td>
                       </tr>
@@ -607,15 +588,14 @@ export default function ProductDetailPage() {
                   </tbody>
                 </table>
               ) : (
-                <p className="no-data">No brand breakdown available.</p>
+                <p className="pdp-muted">No brand breakdown available.</p>
               )}
             </div>
 
-            {/* TOP CATEGORY TABLE */}
-            <div className="breakdown-card">
-              <h3>TOP CATEGORY</h3>
+            <div className="pdp-table-card">
+              <h3>Top categories</h3>
               {topCategory && topCategory.length > 0 ? (
-                <table className="breakdown-table">
+                <table className="pdp-table">
                   <thead>
                     <tr>
                       <th>Category</th>
@@ -634,72 +614,66 @@ export default function ProductDetailPage() {
                   </tbody>
                 </table>
               ) : (
-                <p className="no-data">No category breakdown available.</p>
+                <p className="pdp-muted">No category breakdown available.</p>
               )}
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* ALL PRODUCTS (MANIFEST / INVENTORIES TABLE) */}
-        <div className="pdp-manifest-section">
-          <div className="manifest-header-row">
-            <h2>ALL PRODUCTS</h2>
-            <div className="manifest-actions">
+        <section className="pdp-section">
+          <div className="pdp-manifest-head">
+            <div>
+              <h2>All products in this lot</h2>
+              <p className="pdp-muted">
+                {inventoryMeta.total_count > 0
+                  ? `${inventoryMeta.total_count} items listed`
+                  : 'Itemized list for this lot'}
+              </p>
+            </div>
+            <div className="pdp-manifest-actions">
               <button
                 type="button"
-                className="btn-manifest-action"
+                className="wl-btn wl-btn-secondary wl-btn-sm"
                 onClick={handleEmailManifest}
                 disabled={emailingManifest}
               >
                 {emailingManifest ? 'Sending…' : 'Email Manifest'}
               </button>
-
               <button
                 type="button"
-                className={`btn-manifest-download ${downloadingManifest ? 'loading' : ''}`}
+                className="wl-btn wl-btn-primary wl-btn-sm"
                 onClick={handleDownloadManifest}
                 disabled={downloadingManifest}
               >
-                {downloadingManifest ? (
-                  <>
-                    <span className="spinner-sm"></span> Downloading...
-                  </>
-                ) : (
-                  <>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="7 10 12 15 17 10" />
-                      <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    Download Manifest
-                  </>
-                )}
+                {downloadingManifest ? 'Downloading…' : 'Download'}
               </button>
-
               <a
-                className="btn-whatsapp-action"
+                className="wl-btn wl-btn-secondary wl-btn-sm"
                 href={`https://api.whatsapp.com/send?phone=+919481359961&text=Hello%21%20Interested%20in%20lot%20${lotSummary.id}`}
                 target="_blank"
                 rel="noreferrer"
               >
-                Whatsapp
+                WhatsApp
               </a>
             </div>
           </div>
 
           {inventoryLoading ? (
-            <div className="inventory-loading">Loading items...</div>
+            <div className="wl-loading-block">
+              <div className="wl-spinner" />
+              Loading items…
+            </div>
           ) : (
             <>
-              <div className="table-responsive">
-                <table className="manifest-table">
+              <div className="pdp-table-wrap">
+                <table className="pdp-table pdp-manifest-table">
                   <thead>
                     <tr>
-                      <th>STOCK IMAGE</th>
-                      <th>DESCRIPTION</th>
-                      <th>BRAND</th>
-                      <th>CATEGORY</th>
-                      <th>QUANTITY</th>
+                      <th>Item</th>
+                      <th>Description</th>
+                      <th>Brand</th>
+                      <th>Category</th>
+                      <th>Qty</th>
                       <th>MRP</th>
                     </tr>
                   </thead>
@@ -707,23 +681,25 @@ export default function ProductDetailPage() {
                     {inventories && inventories.length > 0 ? (
                       inventories.map((prod) => (
                         <tr key={prod.id}>
-                          <td className="col-image">
+                          <td>
                             {prod.image_urls && prod.image_urls.length > 0 ? (
-                              <img src={prod.image_urls[0]} alt="product" className="stock-thumb" />
+                              <img src={prod.image_urls[0]} alt="" className="pdp-item-thumb" loading="lazy" />
                             ) : (
-                              <div className="no-stock-thumb">📦</div>
+                              <span className="pdp-item-thumb pdp-item-thumb--empty">—</span>
                             )}
                           </td>
-                          <td className="col-desc">{prod.description}</td>
-                          <td className="col-brand">{prod.brand}</td>
-                          <td className="col-cat">{prod.category}</td>
-                          <td className="col-qty">{prod.quantity}</td>
-                          <td className="col-mrp">{formatRawMoney(prod.mrp)}</td>
+                          <td className="pdp-item-desc">{prod.description}</td>
+                          <td>{prod.brand}</td>
+                          <td>{prod.category}</td>
+                          <td>{prod.quantity}</td>
+                          <td className="pdp-item-mrp">{formatRawMoney(prod.mrp)}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="no-data">No product items found for this lot.</td>
+                        <td colSpan="6" className="pdp-muted" style={{ textAlign: 'center', padding: 24 }}>
+                          No product items found for this lot.
+                        </td>
                       </tr>
                     )}
                   </tbody>
@@ -731,21 +707,23 @@ export default function ProductDetailPage() {
               </div>
 
               {inventoryMeta.total_pages > 1 && (
-                <div className="inventory-pagination">
+                <div className="wl-pagination">
                   <button
                     type="button"
                     disabled={inventoryPage <= 1}
                     onClick={() => setInventoryPage((p) => Math.max(1, p - 1))}
+                    aria-label="Previous page"
                   >
                     ‹
                   </button>
-                  <span className="page-info">
+                  <span className="wl-page-label">
                     Page {inventoryPage} of {inventoryMeta.total_pages}
                   </span>
                   <button
                     type="button"
                     disabled={inventoryPage >= inventoryMeta.total_pages}
                     onClick={() => setInventoryPage((p) => Math.min(inventoryMeta.total_pages, p + 1))}
+                    aria-label="Next page"
                   >
                     ›
                   </button>
@@ -753,35 +731,66 @@ export default function ProductDetailPage() {
               )}
             </>
           )}
-        </div>
+        </section>
+
+        <section className="pdp-section">
+          <h2>Good to know</h2>
+          <div className="pdp-info-grid">
+            <div className="pdp-info-card">
+              <h3>Condition</h3>
+              <p><strong>{lotSummary.grade_name}</strong> — the stated grade applies to this lot as a whole. Individual items are listed in the manifest above.</p>
+            </div>
+            <div className="pdp-info-card">
+              <h3>Terms of purchase</h3>
+              <p>All sales are through open auction. The highest qualifying bid wins, and payment is confirmed before dispatch is arranged.</p>
+            </div>
+            <div className="pdp-info-card">
+              <h3>Delivery</h3>
+              <p>{lotSummary.lot_description || 'Delivery between 2 to 3 working days after full payment.'}</p>
+            </div>
+            <div className="pdp-info-card">
+              <h3>Not bidding? Tell us why</h3>
+              {feedbackSubmitted ? (
+                <p className="pdp-feedback-thanks">Thank you for your feedback.</p>
+              ) : (
+                <form onSubmit={handleFeedbackSubmit} className="pdp-feedback-form">
+                  <div className="pdp-feedback-options">
+                    {[
+                      'Lot too small',
+                      'Lot too large',
+                      'Logistics cost is too high',
+                      'Lot mix not good',
+                      'Manifest not clear',
+                      'No grading details',
+                      'Pricing not attractive'
+                    ].map((reason) => (
+                      <label key={reason} className="pdp-feedback-option">
+                        <input
+                          type="radio"
+                          name="feedback-reason"
+                          value={reason}
+                          checked={selectedReason === reason}
+                          onChange={(e) => setSelectedReason(e.target.value)}
+                        />
+                        <span>{reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <button type="submit" className="wl-btn wl-btn-secondary wl-btn-sm" disabled={!selectedReason}>
+                    Submit Feedback
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="footer">
-        <div className="footer-brand">
-          <div className="brand-logo footer-logo" role="img" aria-label="wholelot traders">
-            <span className="brand-text">wholelot</span>
-            <span className="brand-text-second">traders</span>
-          </div>
-        </div>
-        <div className="footer-links">
-          <a href="#">About Us</a>
-          <a href="#">Contact Us</a>
-          <a href="#">FAQ</a>
-        </div>
-        <div className="footer-links">
-          <a href="#">Terms of Purchase</a>
-          <a href="#">Items Condition</a>
-          <a href="#">Privacy Policy</a>
-        </div>
-        <div className="footer-contact">
-          <p>📞 1800-419-0431</p>
-          <p>✉ support@wholelottraders.com</p>
-        </div>
-      </footer>
+      <SiteFooter />
 
       <a
         className="whatsapp-fab"
-        href={`https://api.whatsapp.com/send?phone=+919481359961&text=Hello%21%20.`}
+        href="https://api.whatsapp.com/send?phone=+919481359961&text=Hello%21%20."
         target="_blank"
         rel="noreferrer"
         aria-label="Open WhatsApp"

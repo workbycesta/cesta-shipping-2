@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import './SignUpPage.css'
+import { Link, useNavigate } from 'react-router-dom'
+import SiteHeader, { SiteFooter } from './SiteChrome'
+import './theme.css'
+import './Auth.css'
 
 const initialForm = {
   name: '',
@@ -12,11 +14,11 @@ const initialForm = {
 }
 
 export default function SignUpPage() {
+  const navigate = useNavigate()
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // OTP flow state (mirrors b4traders: SEND OTP -> enter OTP -> submit)
   const [otpSent, setOtpSent] = useState(false)
   const [otp, setOtp] = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
@@ -29,7 +31,6 @@ export default function SignUpPage() {
   const update = (field) => (e) => {
     const value = field === 'termsAccepted' ? e.target.checked : e.target.value
     if (field === 'mobile') {
-      // enforce 10 digit numeric mobile like b4traders
       const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
       setForm((f) => ({ ...f, mobile: digits }))
       return
@@ -89,7 +90,7 @@ export default function SignUpPage() {
         throw new Error(data.message || 'Failed to send OTP')
       }
       setOtpSent(true)
-      setOtpMessage(`OTP sent to ${data.mobile || form.mobile}. ${data.devOtp ? `(Dev OTP: ${data.devOtp})` : ''}`)
+      setOtpMessage(`OTP sent to ${data.mobile || form.mobile}.`)
       startResendTimer()
     } catch (err) {
       if (isResend) setOtpError(err.message)
@@ -125,173 +126,189 @@ export default function SignUpPage() {
     }
   }
 
-  if (done) {
-    return (
-      <div className="signup-page">
-        <div className="signup-card signup-success">
-          <div className="success-icon">✓</div>
-          <h1>Registration Complete!</h1>
-          <p>
-            Thank you, <strong>{form.name}</strong>. Your buyer account has been created and is
-            now <strong>awaiting admin approval</strong>.
-          </p>
-          <p className="success-note">
-            You will be able to sign in once the admin approves your account.
-          </p>
-          <Link to="/" className="signup-back-link">← Back to Home</Link>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="signup-page">
-      <div className="signup-card">
-        <h1 className="signup-title">Buyer Registration Form</h1>
-        {error && <div className="signup-error">{error}</div>}
-
-        <form className="signup-form" onSubmit={handleVerifyOtp}>
-          <div className="signup-row">
-            <div className="signup-field">
-              <label htmlFor="su-name">Name<span className="req">*</span></label>
-              <input
-                id="su-name"
-                type="text"
-                placeholder="Name"
-                value={form.name}
-                onChange={update('name')}
-                disabled={otpSent}
-                required
-              />
-            </div>
-            <div className="signup-field">
-              <label htmlFor="su-email">Email ID</label>
-              <input
-                id="su-email"
-                type="email"
-                placeholder="Ex: xyz123@gmail.com"
-                value={form.email}
-                onChange={update('email')}
-                disabled={otpSent}
-              />
-            </div>
-          </div>
-
-          <div className="signup-row">
-            <div className="signup-field">
-              <label htmlFor="su-mobile">Mobile Number<span className="req">*</span></label>
-              <div className="mobile-row">
-                <input
-                  id="su-mobile"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="10 digit mobile number"
-                  value={form.mobile}
-                  onChange={update('mobile')}
-                  disabled={otpSent}
-                  required
-                />
-                <button
-                  type="button"
-                  className="btn-send-otp"
-                  onClick={() => handleSendOtp(false)}
-                  disabled={otpLoading || otpSent || form.mobile.length !== 10}
-                >
-                  {otpLoading ? 'SENDING…' : 'SEND OTP'}
-                </button>
-              </div>
-            </div>
-
-            <div className="signup-field">
-              <label htmlFor="su-password">Password<span className="req">*</span></label>
-              <input
-                id="su-password"
-                type="password"
-                placeholder="Minimum 8 characters"
-                value={form.password}
-                onChange={update('password')}
-                minLength={8}
-                disabled={otpSent}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="signup-row">
-            <div className="signup-field">
-              <label htmlFor="su-org">Organisation Name</label>
-              <input
-                id="su-org"
-                type="text"
-                placeholder="Enter your company name here"
-                value={form.organisationName}
-                onChange={update('organisationName')}
-                disabled={otpSent}
-              />
-            </div>
-          </div>
-
-          {otpSent && (
-            <div className="otp-section">
-              <div className="otp-message">{otpMessage}</div>
-              <div className="otp-row">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Enter 6 digit OTP"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength={6}
-                  required
-                />
-                <button
-                  type="button"
-                  className="btn-resend-otp"
-                  onClick={() => handleSendOtp(true)}
-                  disabled={otpLoading || resendTimer > 0}
-                >
-                  {resendTimer > 0 ? `RESEND (${resendTimer}s)` : 'RESEND OTP'}
-                </button>
-              </div>
-              {otpError && <div className="signup-error">{otpError}</div>}
-              <button type="submit" className="btn-submit-form" disabled={loading}>
-                {loading ? 'VERIFYING…' : 'VERIFY OTP & COMPLETE REGISTRATION'}
+    <div className="wl-page">
+      <SiteHeader />
+      <div className="wl-auth-wrap">
+        <div className="wl-auth-card wide">
+          {done ? (
+            <div className="auth-success">
+              <div className="auth-success__icon">✓</div>
+              <h1>Registration complete</h1>
+              <p>
+                Thank you, <strong>{form.name}</strong>. Your buyer account has been
+                created and is now <strong>awaiting admin approval</strong>.
+              </p>
+              <p className="auth-success__note">
+                You will be able to sign in once the admin approves your account.
+              </p>
+              <button type="button" className="wl-btn wl-btn-primary" onClick={() => navigate('/')}>
+                Back to Home
               </button>
             </div>
+          ) : (
+            <>
+              <div className="auth-steps" aria-label="Registration progress">
+                <span className={`auth-step ${!otpSent ? 'active' : 'done'}`}>1 · Details</span>
+                <span className="auth-step__line" />
+                <span className={`auth-step ${otpSent ? 'active' : ''}`}>2 · Verify OTP</span>
+              </div>
+
+              <h1>Create a buyer account</h1>
+              <p className="wl-auth-sub">
+                Register your business to bid on live liquidation lots.
+              </p>
+
+              {error && <div className="wl-notice wl-notice-error">{error}</div>}
+
+              <form className="wl-form" onSubmit={handleVerifyOtp}>
+                <div className="wl-form-2col">
+                  <div className="wl-field">
+                    <label htmlFor="su-name">Full name *</label>
+                    <input
+                      id="su-name"
+                      className="wl-input"
+                      type="text"
+                      placeholder="Your name"
+                      value={form.name}
+                      onChange={update('name')}
+                      disabled={otpSent}
+                      required
+                    />
+                  </div>
+                  <div className="wl-field">
+                    <label htmlFor="su-email">Email *</label>
+                    <input
+                      id="su-email"
+                      className="wl-input"
+                      type="email"
+                      placeholder="you@company.com"
+                      value={form.email}
+                      onChange={update('email')}
+                      disabled={otpSent}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="wl-form-2col">
+                  <div className="wl-field">
+                    <label htmlFor="su-mobile">Mobile number *</label>
+                    <div className="auth-mobile-row">
+                      <input
+                        id="su-mobile"
+                        className="wl-input"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="10 digit mobile number"
+                        value={form.mobile}
+                        onChange={update('mobile')}
+                        disabled={otpSent}
+                        required
+                      />
+                      {!otpSent && (
+                        <button
+                          type="button"
+                          className="wl-btn wl-btn-secondary wl-btn-sm"
+                          onClick={() => handleSendOtp(false)}
+                          disabled={otpLoading}
+                        >
+                          {otpLoading ? 'Sending…' : 'Send OTP'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="wl-field">
+                    <label htmlFor="su-password">Password *</label>
+                    <input
+                      id="su-password"
+                      className="wl-input"
+                      type="password"
+                      placeholder="Minimum 8 characters"
+                      value={form.password}
+                      onChange={update('password')}
+                      minLength={8}
+                      disabled={otpSent}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="wl-field">
+                  <label htmlFor="su-org">Organisation name</label>
+                  <input
+                    id="su-org"
+                    className="wl-input"
+                    type="text"
+                    placeholder="Your company name"
+                    value={form.organisationName}
+                    onChange={update('organisationName')}
+                    disabled={otpSent}
+                  />
+                </div>
+
+                {otpSent && (
+                  <div className="auth-otp-box">
+                    <p className="auth-otp-msg">{otpMessage}</p>
+                    <div className="auth-otp-row">
+                      <input
+                        className="wl-input auth-otp-input"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="6 digit OTP"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        maxLength={6}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="wl-btn wl-btn-secondary wl-btn-sm"
+                        onClick={() => handleSendOtp(true)}
+                        disabled={otpLoading || resendTimer > 0}
+                      >
+                        {resendTimer > 0 ? `Resend (${resendTimer}s)` : 'Resend OTP'}
+                      </button>
+                    </div>
+                    {otpError && <div className="wl-notice wl-notice-error" style={{ marginBottom: 0 }}>{otpError}</div>}
+                    <button type="submit" className="wl-btn wl-btn-primary wl-btn-block" disabled={loading}>
+                      {loading ? 'Verifying…' : 'Verify OTP & Complete Registration'}
+                    </button>
+                  </div>
+                )}
+
+                <label className="auth-terms">
+                  <input
+                    type="checkbox"
+                    checked={form.termsAccepted}
+                    onChange={update('termsAccepted')}
+                    disabled={otpSent}
+                    required
+                  />
+                  <span>I accept the Terms and Conditions</span>
+                </label>
+
+                {!otpSent && (
+                  <button
+                    type="button"
+                    className="wl-btn wl-btn-primary wl-btn-block"
+                    onClick={() => handleSendOtp(false)}
+                    disabled={otpLoading}
+                  >
+                    {otpLoading ? 'Sending OTP…' : 'Continue →'}
+                  </button>
+                )}
+              </form>
+
+              <p className="auth-switch">
+                Already registered? Use <strong>Sign In</strong> from the header to log in.
+              </p>
+            </>
           )}
-
-          <div className="terms-row">
-            <label className="terms-label">
-              <input
-                type="checkbox"
-                checked={form.termsAccepted}
-                onChange={update('termsAccepted')}
-                disabled={otpSent}
-                required
-              />
-              <span>
-                Accept Terms and Condition <a href="#" onClick={(e) => e.preventDefault()}>click here to view</a>
-              </span>
-            </label>
-          </div>
-
-          {!otpSent && (
-            <button
-              type="button"
-              className="btn-submit-form"
-              onClick={() => handleSendOtp(false)}
-              disabled={otpLoading}
-            >
-              {otpLoading ? 'SENDING OTP…' : 'SUBMIT FORM'}
-            </button>
-          )}
-        </form>
-
-        <p className="signup-signin-hint">
-          Already registered?{' '}
-          <Link to="/" className="signup-signin-link">Sign In here</Link>
-        </p>
+        </div>
       </div>
+      <SiteFooter />
     </div>
   )
 }

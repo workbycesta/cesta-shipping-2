@@ -1,0 +1,218 @@
+/* Auth: signup page additions + sign-in modal refresh. */
+
+.auth-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.auth-step {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wl-muted);
+  background: var(--wl-bg-alt);
+  border: 1px solid var(--wl-line);
+  border-radius: 20px;
+  padding: 6px 16px;
+}
+
+.auth-step.active {
+  background: var(--wl-brand);
+  border-color: var(--wl-brand);
+  color: #fff;
+}
+
+.auth-step.done {
+  background: var(--wl-success-bg);
+  border-color: var(--wl-success-line);
+  color: var(--wl-success);
+}
+
+.auth-step__line {
+  width: 32px;
+  height: 2px;
+  background: var(--wl-line);
+}
+
+.auth-mobile-row {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-mobile-row .wl-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.auth-mobile-row .wl-btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.auth-otp-box {
+  background: var(--wl-brand-soft);
+  border: 1px solid var(--wl-info-line);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-otp-msg {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--wl-ink);
+  margin: 0;
+}
+
+.auth-otp-row {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-otp-input {
+  flex: 1;
+  letter-spacing: 4px;
+  font-size: 16px;
+  text-align: center;
+}
+
+.auth-terms {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--wl-ink);
+  cursor: pointer;
+}
+
+.auth-terms input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--wl-brand);
+}
+
+.auth-switch {
+  margin-top: 20px;
+  text-align: center;
+  color: var(--wl-muted);
+  font-size: 14px;
+}
+
+.auth-success {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-success__icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--wl-success-bg);
+  border: 1px solid var(--wl-success-line);
+  color: var(--wl-success);
+  font-size: 30px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-success h1 {
+  margin-bottom: 0;
+}
+
+.auth-success p {
+  max-width: 460px;
+  font-size: 15px;
+}
+
+.auth-success__note {
+  background: var(--wl-warning-bg);
+  border: 1px solid var(--wl-warning-line);
+  color: var(--wl-warning);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+/* ---------- Sign-in modal ---------- */
+.signin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.signin-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 440px;
+  padding: 32px;
+  position: relative;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+}
+
+.signin-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--wl-bg-alt);
+  border: 1px solid var(--wl-line);
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  color: var(--wl-body);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signin-modal__close:hover {
+  color: var(--wl-ink);
+  border-color: var(--wl-muted);
+}
+
+.signin-modal h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--wl-ink);
+  margin: 0 0 6px;
+}
+
+.signin-modal__sub {
+  font-size: 13.5px;
+  color: var(--wl-muted);
+  margin: 0 0 20px;
+}
+
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.signin-switch {
+  margin-top: 18px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--wl-muted);
+}
+
+.signin-switch a {
+  color: var(--wl-brand);
+  font-weight: 600;
+}

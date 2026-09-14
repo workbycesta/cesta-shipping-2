@@ -1,3 +1,4 @@
+# - Prefers hardcoded business parameters (e.g., timer offsets, thresholds) to be exposed as configurable settings in the admin panel rather than hardcoded. Confidence: 0.9
 - Prefers hardcoded business parameters (e.g., timer offsets, thresholds) to be exposed as configurable settings in the admin panel rather than hardcoded. Confidence: 0.9
 - Prefers full auditability for admin actions: every admin-panel change should log who did it and when, visible in a Recent Activity section. Confidence: 0.9
 - Prefers clean white/light business theme over dark gradient-heavy styling that looks AI-generated. Confidence: 0.85
