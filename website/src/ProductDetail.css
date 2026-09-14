@@ -29,7 +29,7 @@
   justify-content: center;
 }
 
-.pdp-gallery__main img {
+.pdp-gallery__main img.pdp-gallery__main-img {
   max-width: 100%;
   max-height: 100%;
   width: 100%;
@@ -42,17 +42,26 @@
   font-size: 14px;
 }
 
-.pdp-gallery__org {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  max-height: 40px;
-  max-width: 120px;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 4px 8px;
+.pdp-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdp-source__label {
+  font-size: 12.5px;
+  color: var(--wl-muted);
+  font-weight: 500;
+}
+
+.pdp-source__logo {
+  height: 28px;
+  max-width: 110px;
+  object-fit: contain;
+  background: #fff;
+  padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid var(--wl-line);
-  object-fit: contain;
 }
 
 .pdp-gallery__thumbs {

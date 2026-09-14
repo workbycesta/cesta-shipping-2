@@ -5,3 +5,5 @@
 - Strongly dislikes fabricated UI content: no static mock data, fake stats/counters, fake activity tickers, or mock testimonials — landing/marketing pages should contain only real business information. Confidence: 0.9
 - Prefers site-wide visual consistency: all frontend pages should follow the landing page's theme, style, and colors as a single design system. Confidence: 0.9
 - Prefers research-backed builds: consult current web best practices before building major UI sections to reach professional e-commerce standard. Confidence: 0.8
+- Prefers generous vertical whitespace / breathing room between hero headline, description, buttons, and lists rather than tight stacking. Confidence: 0.85
+- Prefers product image galleries to show only product photos; source/marketplace logos should be small discrete badges (e.g., 'Sourced from' under title) rather than large overlays filling gallery space. Confidence: 0.9

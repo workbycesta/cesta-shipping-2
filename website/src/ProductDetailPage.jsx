@@ -398,12 +398,9 @@ export default function ProductDetailPage() {
           <div className="pdp-gallery">
             <div className="pdp-gallery__main">
               {currentImage ? (
-                <img src={currentImage} alt={lotSummary.lot_name} />
+                <img src={currentImage} alt={lotSummary.lot_name} className="pdp-gallery__main-img" />
               ) : (
                 <div className="pdp-gallery__placeholder">No image available</div>
-              )}
-              {lotSummary.org_image_url && (
-                <img src={lotSummary.org_image_url} alt="" className="pdp-gallery__org" />
               )}
             </div>
             {images.length > 1 && (
@@ -453,6 +450,13 @@ export default function ProductDetailPage() {
               )}
 
               <h1 className="pdp-title">{lotSummary.lot_name}</h1>
+
+              {lotSummary.org_image_url && (
+                <div className="pdp-source">
+                  <span className="pdp-source__label">Sourced from</span>
+                  <img src={lotSummary.org_image_url} alt="Source marketplace" className="pdp-source__logo" loading="lazy" />
+                </div>
+              )}
 
               <div className="pdp-price-block">
                 <div className="pdp-price-row">
