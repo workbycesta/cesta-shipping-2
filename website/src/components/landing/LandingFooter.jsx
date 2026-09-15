@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CONTACT, SOCIALS } from './lotz/lotzData'
+import { CONTACT } from './lotz/lotzData'
 
 export default function LandingFooter() {
   return (
@@ -16,8 +16,6 @@ export default function LandingFooter() {
                 and surplus inventory, traded by the pallet and truckload.
               </p>
               <div className="lotz-footer__contact">
-                <p><strong>Address:</strong> {CONTACT.address}</p>
-                <p><strong>Phone:</strong> <a href={CONTACT.phoneHref}>{CONTACT.phoneDisplay}</a></p>
                 <p><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a></p>
               </div>
             </div>
@@ -43,16 +41,8 @@ export default function LandingFooter() {
             </nav>
           </div>
 
-          <div className="lotz-footer__social">
-            {SOCIALS.map((s) => (
-              <a key={s.label} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label}>
-                {s.label}
-              </a>
-            ))}
-          </div>
-
           <div className="lotz-footer__bottom">
-            <span>Copyright © 2023 Lotmart, All rights reserved. Powered by DAMN GROW.</span>
+            <span>Copyright © 2026 Lotmart, All rights reserved.</span>
           </div>
         </div>
       </footer>

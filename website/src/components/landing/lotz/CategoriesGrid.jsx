@@ -16,12 +16,16 @@ export default function CategoriesGrid() {
                 <h3>{c.tag}</h3>
                 <p>{c.title}</p>
               </div>
-              <div className="lotz-img-placeholder" data-asset={`category-${c.tag}`} role="img" aria-label={`${c.tag} placeholder`}>
-                <span>{c.tag}</span>
-              </div>
+              {c.image ? (
+                <img className="lotz-cat__img" src={c.image} alt={c.tag} loading="lazy" />
+              ) : (
+                <div className="lotz-img-placeholder" data-asset={`category-${c.tag}`} role="img" aria-label={`${c.tag} placeholder`}>
+                  <span>{c.tag}</span>
+                </div>
+              )}
               <div className="lotz-cat__body">
                 <p>{c.text}</p>
-                <a className="lotz-btn lotz-btn--sm" href={c.quoteUrl} target="_blank" rel="noreferrer">Get Quote</a>
+                <Link className="lotz-btn lotz-btn--sm" to="/products">Get Quote</Link>
               </div>
             </article>
           ))}

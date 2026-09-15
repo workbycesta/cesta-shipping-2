@@ -8,9 +8,9 @@ export default function WhoWeAre() {
       <div className="lotz-container lotz-split">
         <div>
           <p className="lotz-eyebrow lotz-reveal">Who We Are</p>
-          <h2 className="lotz-h2 lotz-reveal">We Are The Leading Liquidation Company In India.</h2>
+          <h2 className="lotz-h2 lotz-reveal">Bulk deals on Amazon &amp; Flipkart surplus stock.</h2>
           <p className="lotz-body lotz-reveal">
-            Lotmart, leading liquidation company in India that specializes in selling bulk Amazon and Flipkart lots at unbeatable prices. With a wide range of categories available and a commitment to customer satisfaction.
+            Lotmart helps resellers buy Amazon and Flipkart return lots and branded surplus stock in bulk at honest prices. With plenty of categories to choose from, we keep the process simple so you can restock and sell with confidence.
           </p>
           <Link to="/products" className="lotz-btn lotz-reveal">Learn More</Link>
         </div>

@@ -15,7 +15,7 @@ export default function MarketplacesSection() {
         if (!res.ok) return
         const data = await res.json()
         if (!cancelled && data && data.marketplaces) {
-          setMarketplaces(data.marketplaces.filter(Boolean))
+          setMarketplaces(data.marketplaces.filter((mp) => mp && Number(mp.active_lots) > 0))
         }
       } catch {
         // Section hides itself on failure — never break the page.

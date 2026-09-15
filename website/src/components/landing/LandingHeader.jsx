@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../../UserContext'
-import { CONTACT } from './lotz/lotzData'
-import LotzTopBar from './lotz/LotzTopBar'
 import { IconClose } from './LandingIcons'
 
 export default function LandingHeader() {
@@ -11,25 +9,8 @@ export default function LandingHeader() {
   const { user, openSignInModal, logout } = useUser()
   const navigate = useNavigate()
 
-  const scrollToSection = (e, id) => {
-    e.preventDefault()
-    setMobileMenuOpen(false)
-    const element = document.getElementById(id)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-
-  const navLinks = [
-    { label: 'Home', id: 'top' },
-    { label: 'Categories', id: 'categories' },
-    { label: 'Contact Us', id: 'contact' },
-    { label: 'About Us', id: 'about' }
-  ]
-
   return (
     <>
-      <LotzTopBar />
       <header className="landing-header">
         <div className="landing-header__inner">
           <Link to="/" className="landing-logo landing-logo--img" aria-label="Lotmart Home">
@@ -37,18 +18,11 @@ export default function LandingHeader() {
           </Link>
 
           <nav className="landing-nav" aria-label="Main Navigation">
-            {navLinks.map((link) => (
-              <a
-                key={link.id}
-                href={`#${link.id}`}
-                onClick={(e) => scrollToSection(e, link.id)}
-                className="landing-nav__link"
-              >
-                {link.label}
-              </a>
-            ))}
+            <Link to="/products" className="landing-nav__link">
+              Shop All Auctions
+            </Link>
             <Link to="/marketplaces" className="landing-nav__link">
-              Auctions
+              Browse Marketplaces
             </Link>
           </nav>
 
@@ -98,19 +72,16 @@ export default function LandingHeader() {
               <>
                 <button
                   type="button"
-                  className="landing-signin-link"
+                  className="landing-btn landing-btn--ghost landing-btn--sm"
                   onClick={openSignInModal}
                 >
-                  Sign In
+                  Log In
                 </button>
-                <Link to="/signup" className="landing-btn landing-btn--secondary landing-btn--sm">
-                  Register
+                <Link to="/signup" className="landing-btn landing-btn--primary landing-btn--sm">
+                  Sign Up
                 </Link>
               </>
             )}
-            <a href={CONTACT.phoneHref} className="lotz-btn lotz-btn--sm landing-header__call">
-              Call Now
-            </a>
 
             <button
               type="button"
@@ -149,29 +120,15 @@ export default function LandingHeader() {
           </div>
 
           <nav className="landing-mobile-nav">
-            {navLinks.map((link) => (
-              <a
-                key={link.id}
-                href={`#${link.id}`}
-                onClick={(e) => scrollToSection(e, link.id)}
-                className="landing-mobile-nav__link"
-              >
-                {link.label}
-              </a>
-            ))}
+            <Link to="/products" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
+              Shop All Auctions
+            </Link>
             <Link to="/marketplaces" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
-              Auctions
+              Browse Marketplaces
             </Link>
           </nav>
 
           <div className="landing-mobile-drawer__actions">
-            <a
-              href={CONTACT.phoneHref}
-              className="landing-btn landing-btn--primary landing-btn--block"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Call Now
-            </a>
             {!user && (
               <>
                 <button
@@ -182,14 +139,14 @@ export default function LandingHeader() {
                     openSignInModal()
                   }}
                 >
-                  Sign In
+                  Log In
                 </button>
                 <Link
                   to="/signup"
                   className="landing-btn landing-btn--primary landing-btn--block"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Create Buyer Account
+                  Sign Up
                 </Link>
               </>
             )}

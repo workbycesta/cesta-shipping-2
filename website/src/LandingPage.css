@@ -90,6 +90,16 @@
   border-color: var(--wl-ink);
 }
 
+.landing-btn--ghost {
+  background: transparent;
+  color: var(--wl-ink);
+  border-color: transparent;
+}
+
+.landing-btn--ghost:hover {
+  background: #f1f5f9;
+}
+
 .landing-btn--lg {
   padding: 13px 28px;
   font-size: 1rem;
@@ -1345,6 +1355,23 @@ textarea.form-input {
 .lotz-center { text-align: center; display: flex; flex-direction: column; align-items: center; }
 .lotz-center .lotz-body { max-width: 640px; }
 
+.lotz-signup-cta { max-width: 760px; }
+.lotz-signup-cta .lotz-h2 { font-size: 2.6rem; text-wrap: balance; }
+.lotz-signup-cta .lotz-body { max-width: 620px; font-size: 16.5px; }
+.lotz-signup-cta .lotz-btn--lg {
+  margin-top: 12px;
+  padding: 18px 52px;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(126, 27, 30, 0.28);
+}
+.lotz-signup-cta .lotz-btn--lg:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(126, 27, 30, 0.34);
+}
+.lotz-signup-note { margin-top: 14px; font-size: 13px; color: var(--wl-muted); }
+
 .lotz-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1369,35 +1396,73 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 .landing-header__call { margin-left: 8px; }
 .landing-logo__img { height: 44px; max-width: 210px; }
 
-.lotz-hero { position: relative; min-height: 600px; display: flex; align-items: center; background: var(--lotz-navy); overflow: hidden; }
-.lotz-hero__bg {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(10, 11, 20, 0.88) 0%, rgba(10, 11, 20, 0.62) 45%, rgba(10, 11, 20, 0.35) 100%),
-    repeating-linear-gradient(90deg, #3a3d52 0 90px, #2c2e42 90px 180px);
+.lotz-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(180deg, #ffffff 0%, #faf7f7 78%, #f6efef 100%);
+  overflow: hidden;
 }
-.lotz-hero__overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 60%); }
-.lotz-hero__content { position: relative; z-index: 1; padding-top: 90px; padding-bottom: 90px; }
+.lotz-hero__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 880px;
+  margin: 0 auto;
+  padding-top: 104px;
+  padding-bottom: 120px;
+}
+.lotz-hero .lotz-eyebrow {
+  font-size: 13px;
+  letter-spacing: 0.22em;
+  margin-bottom: 20px;
+}
 .lotz-hero__title {
   font-family: var(--lotz-heading);
-  color: #fff;
-  font-size: 68px;
+  color: var(--lotz-char);
+  font-size: 76px;
   font-weight: 800;
-  line-height: 1.05;
-  margin: 0 0 18px;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  margin: 0 0 22px;
+  text-wrap: balance;
 }
-.lotz-hero__sub { color: rgba(255, 255, 255, 0.88); font-size: 16px; line-height: 1.65; max-width: 520px; margin: 0 0 30px; }
+.lotz-hero__accent { color: var(--wl-brand); }
+.lotz-hero__sub {
+  color: var(--lotz-muted);
+  font-size: 19px;
+  line-height: 1.7;
+  max-width: 680px;
+  margin: 0 auto 38px;
+  text-wrap: balance;
+}
+.lotz-hero__actions { display: flex; justify-content: center; }
+.lotz-hero__actions .lotz-btn--lg {
+  padding: 18px 52px;
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  border-radius: 10px;
+  box-shadow: 0 14px 30px rgba(126, 27, 30, 0.28);
+}
+.lotz-hero__actions .lotz-btn--lg:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(126, 27, 30, 0.34);
+}
 
 .lotz-offerings { background: #fff; padding: 0; }
 .lotz-offerings__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1); margin-top: -60px; position: relative; z-index: 2; background: #fff; }
 .lotz-offer { display: flex; gap: 16px; padding: 32px 28px; border-right: 1px solid var(--wl-line); background: #fff; }
 .lotz-offer:last-child { border-right: none; }
-.lotz-offer--highlight { background: var(--wl-brand); color: #fff; }
-.lotz-offer--highlight h2 { color: #fff; }
-.lotz-offer--highlight p { color: rgba(255, 255, 255, 0.88); }
 .lotz-offer h2 { font-family: var(--lotz-heading); font-size: 1.35rem; font-weight: 800; color: var(--lotz-char); margin: 0 0 8px; }
 .lotz-offer p { font-size: 14px; line-height: 1.65; color: var(--lotz-muted); margin: 0; }
+.lotz-offer--highlight { background: var(--wl-brand); color: #fff; }
+.lotz-offer--highlight h2 { color: #fff; }
+.lotz-offer--highlight p { color: rgba(255, 255, 255, 0.92); }
 .lotz-offer__icon {
   width: 56px;
   height: 56px;
@@ -1459,14 +1524,33 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 .lotz-cat__head h3 { font-family: var(--lotz-heading); font-size: 15px; font-weight: 800; color: var(--lotz-char); margin: 0 0 4px; }
 .lotz-cat__head p { font-size: 13px; color: var(--lotz-muted); margin: 0; }
 .lotz-cat .lotz-img-placeholder { border-left: none; border-right: none; min-height: 200px; aspect-ratio: 16 / 10; }
+.lotz-cat__img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; background: #e8eaef; }
 .lotz-cat__body { padding: 18px 20px 22px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
 .lotz-cat__body p { font-size: 13.5px; line-height: 1.65; color: var(--lotz-muted); margin: 0; flex: 1; }
 .lotz-explore { margin-top: 44px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .lotz-explore h3 { font-family: var(--lotz-heading); font-size: 1.2rem; color: var(--lotz-char); margin: 0; }
 .lotz-explore p { font-size: 14px; color: var(--lotz-muted); margin: 0 0 8px; }
 
-.lotz-brands { display: flex; gap: 56px; align-items: center; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
+.lotz-brands { display: flex; gap: 24px; align-items: stretch; justify-content: center; margin-top: 36px; flex-wrap: wrap; }
 .lotz-brand { font-family: var(--lotz-heading); font-size: 1.6rem; font-weight: 800; color: var(--lotz-char); letter-spacing: -0.01em; opacity: 0.85; }
+.lotz-brand-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 168px;
+  max-width: 210px;
+  padding: 22px 20px;
+  background: #fff;
+  border: 1px solid var(--wl-line);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lotz-brand-card:hover { border-color: var(--wl-brand); transform: translateY(-2px); box-shadow: 0 12px 28px rgba(126, 27, 30, 0.12); }
+.lotz-brand-card__logo { width: auto; max-width: 130px; height: 44px; object-fit: contain; }
+.lotz-brand-card__name { font-size: 14px; font-weight: 700; color: var(--lotz-char); }
 
 .lotz-faq { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 56px; align-items: start; }
 .lotz-accordion { display: flex; flex-direction: column; }
@@ -1497,21 +1581,22 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 .lotz-t figcaption { font-size: 14px; font-weight: 700; color: var(--wl-brand); }
 
 .lotz-final { background: var(--wl-brand); padding: 72px 0; }
-.lotz-final .lotz-h2 { max-width: 720px; }
+.lotz-final .lotz-h2 { max-width: 720px; color: #fff; }
+.lotz-final .lotz-eyebrow--light { color: #fff; }
+.lotz-final .lotz-btn { margin-top: 30px; }
 
 .lotz-footer { background: var(--lotz-navy); color: rgba(255, 255, 255, 0.72); padding: 56px 0 0; font-size: 13.5px; }
 .lotz-footer__top { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 40px; padding-bottom: 36px; }
 .lotz-footer__tagline { margin: 14px 0; max-width: 380px; line-height: 1.65; }
 .lotz-footer__contact p { margin: 4px 0; }
-.lotz-footer__contact a, .lotz-footer__col a, .lotz-footer__social a { color: rgba(255, 255, 255, 0.72); text-decoration: none; }
-.lotz-footer__contact a:hover, .lotz-footer__col a:hover, .lotz-footer__social a:hover { color: #fff; text-decoration: underline; }
+.lotz-footer__contact a, .lotz-footer__col a { color: rgba(255, 255, 255, 0.72); text-decoration: none; }
+.lotz-footer__contact a:hover, .lotz-footer__col a:hover { color: #fff; text-decoration: underline; }
 .lotz-footer__col h4 { color: #fff; font-size: 14px; margin: 0 0 14px; }
 .lotz-footer__col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.lotz-footer__social { display: flex; gap: 20px; flex-wrap: wrap; padding: 18px 0; border-top: 1px solid rgba(255, 255, 255, 0.12); }
 .lotz-footer__bottom { padding: 16px 0 24px; border-top: 1px solid rgba(255, 255, 255, 0.12); font-size: 12.5px; }
 
 @media (max-width: 1024px) {
-  .lotz-hero__title { font-size: 54px; }
+  .lotz-hero__title { font-size: 58px; }
   .lotz-why-grid { grid-template-columns: repeat(2, 1fr); }
   .lotz-cat-grid, .lotz-t-grid { grid-template-columns: repeat(2, 1fr); }
   .lotz-faq { grid-template-columns: 1fr; gap: 32px; }
@@ -1529,13 +1614,14 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 @media (max-width: 560px) {
   .lotz-topbar__inner { flex-direction: column; align-items: flex-start; gap: 4px; }
   .lotz-topbar__right { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .lotz-hero { min-height: 0; }
-  .lotz-hero__content { padding-top: 64px; padding-bottom: 64px; }
-  .lotz-hero__title { font-size: 44px; }
+  .lotz-hero__content { padding-top: 72px; padding-bottom: 72px; }
+  .lotz-hero__title { font-size: 42px; }
+  .lotz-hero__sub { font-size: 16.5px; }
   .lotz-section, .lotz-final { padding: 52px 0; }
   .lotz-h2 { font-size: 1.6rem; }
   .lotz-why-grid, .lotz-cat-grid, .lotz-t-grid { grid-template-columns: 1fr; }
-  .lotz-brands { gap: 24px; overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; padding-bottom: 8px; }
+  .lotz-brands { gap: 14px; overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; padding-bottom: 8px; }
+  .lotz-brand-card { min-width: 150px; flex-shrink: 0; }
   .lotz-footer__top { grid-template-columns: 1fr; }
   .lotz-btn { width: 100%; }
   .lotz-btn-row .lotz-btn { flex: 1; }

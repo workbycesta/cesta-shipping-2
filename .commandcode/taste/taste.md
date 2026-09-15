@@ -12,3 +12,10 @@
 - Prefers issues to be fixed one by one sequentially with confirmation before moving to the next, rather than batching multiple fixes together. Confidence: 0.85
 - Prefers frictionless buyer signup: simple registration form that creates a pending entry directly in the admin panel, without OTP/mobile verification steps. Confidence: 0.85
 - Prefers data fidelity for display: show values exactly as returned by backend/API responses without frontend remapping or hardcoded overrides (e.g., no city name substitutions). Confidence: 0.85
+- Prefers to delegate UI/UX implementation details to the implementer once the required actions/content are specified (e.g., 'however u like in terms of ui and ux'). Confidence: 0.7
+- Prefers hero sections centered horizontally with headline, copy, and CTA all centered and enlarged/prominent typography for a proper hero look. Confidence: 0.75
+- Prefers to show only marketplaces/listings with active inventory (active lots > 0) and hide empty ones rather than displaying all entries including zeros. Confidence: 0.85
+- Prefers modest, matter-of-fact marketing copy and rejects boastful superlatives like leading/best company in India. Confidence: 0.85
+- Prefers conversion-focused landing sections that drive internal signup with a single bold, punchy CTA rather than generic site advertising or external WhatsApp/Facebook buttons. Confidence: 0.8
+- Prefers real, category-appropriate photos sourced from the web (e.g., Unsplash URLs) over grey placeholder boxes for cards/sections. Confidence: 0.8
+- Prefers related landing sections showing the same entities to reuse a single live data source (same API, logos, names, filters, links) so they stay in sync instead of maintaining separate static copies per section. Confidence: 0.75

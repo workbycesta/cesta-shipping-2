@@ -70,23 +70,24 @@ export const CATEGORIES = [
     tag: 'Footwear Lots',
     title: 'From Sneakers to Sandals: Our Footwear Lots Have It All',
     text: 'We offer footwear lots, including shoes, flip flops, sandals, and sneakers for both men\u2019s and women\u2019s footwear, in various styles and sizes.',
+    image: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?auto=format&fit=crop&w=800&q=80',
     quoteUrl: 'https://wa.me/916397692392?text=Hi%2C%20I%20am%20interested%20in%20Footwear%20lots.%20Can%20you%20please%20provide%20me%20more%20information%20about%20the%20lot%20and%20pricing%3F'
   },
   {
     tag: 'Tools Lots',
     title: 'From Hand Tools to Power Tools: Our Tools Lots Has It All',
     text: 'We offer Tools Lots, including, drill machines, marble & tile cutters, and more, from top brands in bulk quantities.',
+    image: 'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=800&q=80',
     quoteUrl: 'https://wa.me/916397692392?text=Hi%2C%20I%20am%20interested%20in%20Tools%20lots.%20Can%20you%20please%20provide%20me%20more%20information%20about%20the%20lot%20and%20pricing%3F'
   },
   {
     tag: 'Home Appliances Lots',
     title: 'From Blenders to Refrigerators: Our Home Appliances Lots Have It All',
     text: 'We offer bulk lots of home appliances, including refrigerators, washing machines, air conditioners, and more, from top brands.',
+    image: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=800&q=80',
     quoteUrl: 'https://wa.me/916397692392?text=Hi%2C%20I%20am%20interested%20in%20Home%20Appliances%20lots.%20Can%20you%20please%20provide%20me%20more%20information%20about%20the%20lot%20and%20pricing%3F'
   }
 ]
-
-export const BRANDS = ['Amazon', 'Flipkart', 'FirstCry', 'Puma']
 
 export const FAQS = [
   {

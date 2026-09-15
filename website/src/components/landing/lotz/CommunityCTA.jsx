@@ -1,24 +1,20 @@
-import { FACEBOOK_PAGE, WHATSAPP_GROUP } from './lotzData'
+import { Link } from 'react-router-dom'
 import { useReveal } from './useReveal'
 
 export default function CommunityCTA() {
   const ref = useReveal()
   return (
-    <section className="lotz-section" ref={ref}>
-      <div className="lotz-container lotz-split lotz-split--flip">
-        <div className="lotz-img-placeholder lotz-img-placeholder--tall lotz-reveal" data-asset="community-team" role="img" aria-label="Customer community placeholder">
-          <span>Community</span>
-        </div>
-        <div>
-          <h2 className="lotz-h2 lotz-reveal">Join our Community of Customers to Get Regular Updates.</h2>
-          <p className="lotz-body lotz-reveal">
-            Lotmart values its customers and works hard to keep them up to date about our latest deals and inventory. Join our community of customers to receive regular updates on our latest stock, exclusive deals, and promotions.
-          </p>
-          <div className="lotz-btn-row lotz-reveal">
-            <a className="lotz-btn" href={WHATSAPP_GROUP} target="_blank" rel="noreferrer">Whatsapp Group</a>
-            <a className="lotz-btn" href={FACEBOOK_PAGE} target="_blank" rel="noreferrer">Facebook Page</a>
-          </div>
-        </div>
+    <section className="lotz-section lotz-section--tint" ref={ref}>
+      <div className="lotz-container lotz-center lotz-signup-cta">
+        <p className="lotz-eyebrow lotz-reveal">Free buyer account</p>
+        <h2 className="lotz-h2 lotz-reveal">Stop watching deals sell out. Start bidding on them.</h2>
+        <p className="lotz-body lotz-reveal">
+          Create your free Lotmart account to browse live Amazon and Flipkart lots, track every bid
+          in one place, and pick up winning stock straight from the warehouse. New lots drop
+          regularly — members see them first.
+        </p>
+        <Link to="/signup" className="lotz-btn lotz-btn--lg lotz-reveal">Give Me Access to Live Lots</Link>
+        <span className="lotz-signup-note lotz-reveal">Free to join · Browse live lots as soon as your account is approved</span>
       </div>
     </section>
   )
