@@ -4,7 +4,6 @@ import LandingFooter from './components/landing/LandingFooter'
 import LotzHero from './components/landing/lotz/LotzHero'
 import OfferingCards from './components/landing/lotz/OfferingCards'
 import WhoWeAre from './components/landing/lotz/WhoWeAre'
-import StatsBand from './components/landing/lotz/StatsBand'
 import WhyChooseUs from './components/landing/lotz/WhyChooseUs'
 import CommunityCTA from './components/landing/lotz/CommunityCTA'
 import CategoriesGrid from './components/landing/lotz/CategoriesGrid'
@@ -24,7 +23,6 @@ export default function LandingPage() {
         <OfferingCards />
         <MarketplacesSection />
         <WhoWeAre />
-        <StatsBand />
         <WhyChooseUs />
         <CommunityCTA />
         <CategoriesGrid />

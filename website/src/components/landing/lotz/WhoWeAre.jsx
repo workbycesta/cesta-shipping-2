@@ -14,8 +14,9 @@ export default function WhoWeAre() {
           </p>
           <Link to="/products" className="lotz-btn lotz-reveal">Learn More</Link>
         </div>
-        <div className="lotz-img-placeholder lotz-img-placeholder--wide lotz-reveal" data-asset="who-we-are-warehouse" role="img" aria-label="Warehouse inventory placeholder">
-          <span>25+ Categories Available</span>
+        <div className="lotz-who-img lotz-reveal">
+          <img src="/who-we-are.jpg" alt="Warehouse shelves stocked with bulk inventory lots" loading="lazy" />
+          <span className="lotz-who-img__badge">25+ Categories Available</span>
         </div>
       </div>
     </section>
