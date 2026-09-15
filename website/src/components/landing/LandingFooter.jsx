@@ -1,49 +1,38 @@
 import { Link } from 'react-router-dom'
-import { IconArrowRight } from './LandingIcons'
+import { CONTACT, SOCIALS } from './lotz/lotzData'
 
 export default function LandingFooter() {
   return (
     <>
-      <section className="landing-cta">
-        <div className="landing-container landing-cta__row">
-          <div>
-            <h2>Ready to start bidding?</h2>
-            <p>
-              Browse the marketplaces, or shop every live auction in one place.
-              Registration is open to businesses.
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <Link to="/marketplaces" className="landing-btn landing-btn--primary landing-btn--lg">
-              <span>Browse Marketplaces</span>
-              <IconArrowRight size={18} />
-            </Link>
-            <Link to="/products" className="landing-btn landing-btn--secondary landing-btn--lg">
-              <span>Shop All Auctions</span>
-              <IconArrowRight size={18} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <footer className="landing-footer">
-        <div className="landing-container">
-          <div className="landing-footer__top">
+      <footer className="lotz-footer">
+        <div className="lotz-container">
+          <div className="lotz-footer__top">
             <div>
               <span className="landing-logo landing-logo--img">
                 <img src="/header-logo.png" alt="Lotmart" className="landing-logo__img landing-logo__img--footer" />
               </span>
-              <p className="landing-footer__tagline">
-                A B2B auction marketplace for liquidation, overstock, customer returns,
-                and surplus inventory — traded by the pallet and truckload.
+              <p className="lotz-footer__tagline">
+                Lotmart — a B2B auction marketplace for liquidation, overstock, customer returns,
+                and surplus inventory, traded by the pallet and truckload.
               </p>
-              <div className="landing-footer__contact">
-                <p><strong>Phone:</strong> 1800-419-0431</p>
-                <p><strong>Email:</strong> support@lotmart.com</p>
+              <div className="lotz-footer__contact">
+                <p><strong>Address:</strong> {CONTACT.address}</p>
+                <p><strong>Phone:</strong> <a href={CONTACT.phoneHref}>{CONTACT.phoneDisplay}</a></p>
+                <p><strong>Email:</strong> <a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a></p>
               </div>
             </div>
 
-            <div className="landing-footer__col">
+            <nav className="lotz-footer__col" aria-label="Policies">
+              <h4>Policies</h4>
+              <ul>
+                <li><Link to="#">Privacy Policy</Link></li>
+                <li><Link to="#">Shipping Policy</Link></li>
+                <li><Link to="#">Terms and Condition</Link></li>
+                <li><Link to="#">Refund and Cancelation Policy</Link></li>
+              </ul>
+            </nav>
+
+            <nav className="lotz-footer__col" aria-label="Marketplace">
               <h4>Marketplace</h4>
               <ul>
                 <li><Link to="/marketplaces">Browse Marketplaces</Link></li>
@@ -51,21 +40,19 @@ export default function LandingFooter() {
                 <li><Link to="/signup">Create a Buyer Account</Link></li>
                 <li><Link to="/my-account">My Account</Link></li>
               </ul>
-            </div>
-
-            <div className="landing-footer__col">
-              <h4>Buying Guide</h4>
-              <ul>
-                <li><a href="#marketplaces">Marketplaces</a></li>
-                <li><a href="#how-it-works">How It Works</a></li>
-                <li><a href="#conditions">Condition Standards</a></li>
-                <li><a href="#about">About</a></li>
-              </ul>
-            </div>
+            </nav>
           </div>
 
-          <div className="landing-footer__bottom">
-            <span>© {new Date().getFullYear()} Lotmart. All rights reserved.</span>
+          <div className="lotz-footer__social">
+            {SOCIALS.map((s) => (
+              <a key={s.label} href={s.href} target="_blank" rel="noreferrer" aria-label={s.label}>
+                {s.label}
+              </a>
+            ))}
+          </div>
+
+          <div className="lotz-footer__bottom">
+            <span>Copyright © 2023 Lotmart, All rights reserved. Powered by DAMN GROW.</span>
           </div>
         </div>
       </footer>

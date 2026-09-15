@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../../UserContext'
+import { CONTACT } from './lotz/lotzData'
+import LotzTopBar from './lotz/LotzTopBar'
 import { IconClose } from './LandingIcons'
 
 export default function LandingHeader() {
@@ -18,29 +20,24 @@ export default function LandingHeader() {
     }
   }
 
-  const anchorLinks = [
-    { label: 'How It Works', id: 'how-it-works' },
-    { label: 'Condition Standards', id: 'conditions' },
-    { label: 'About', id: 'about' }
+  const navLinks = [
+    { label: 'Home', id: 'top' },
+    { label: 'Categories', id: 'categories' },
+    { label: 'Contact Us', id: 'contact' },
+    { label: 'About Us', id: 'about' }
   ]
 
   return (
     <>
+      <LotzTopBar />
       <header className="landing-header">
         <div className="landing-header__inner">
           <Link to="/" className="landing-logo landing-logo--img" aria-label="Lotmart Home">
             <img src="/header-logo.png" alt="Lotmart" className="landing-logo__img" />
-            <span className="landing-logo__badge">B2B</span>
           </Link>
 
           <nav className="landing-nav" aria-label="Main Navigation">
-            <Link to="/marketplaces" className="landing-nav__link">
-              Browse Marketplaces
-            </Link>
-            <Link to="/products" className="landing-nav__link">
-              Shop All Auctions
-            </Link>
-            {anchorLinks.map((link) => (
+            {navLinks.map((link) => (
               <a
                 key={link.id}
                 href={`#${link.id}`}
@@ -50,6 +47,9 @@ export default function LandingHeader() {
                 {link.label}
               </a>
             ))}
+            <Link to="/marketplaces" className="landing-nav__link">
+              Auctions
+            </Link>
           </nav>
 
           <div className="landing-header__actions">
@@ -108,12 +108,16 @@ export default function LandingHeader() {
                 </Link>
               </>
             )}
+            <a href={CONTACT.phoneHref} className="lotz-btn lotz-btn--sm landing-header__call">
+              Call Now
+            </a>
 
             <button
               type="button"
               className="landing-mobile-toggle"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Close Menu' : 'Open Menu'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <IconClose size={20} /> : (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -138,19 +142,14 @@ export default function LandingHeader() {
               type="button"
               className="landing-mobile-drawer__close"
               onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close Menu"
             >
               <IconClose size={20} />
             </button>
           </div>
 
           <nav className="landing-mobile-nav">
-            <Link to="/marketplaces" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
-              Browse Marketplaces
-            </Link>
-            <Link to="/products" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
-              Shop All Auctions
-            </Link>
-            {anchorLinks.map((link) => (
+            {navLinks.map((link) => (
               <a
                 key={link.id}
                 href={`#${link.id}`}
@@ -160,9 +159,19 @@ export default function LandingHeader() {
                 {link.label}
               </a>
             ))}
+            <Link to="/marketplaces" className="landing-mobile-nav__link" onClick={() => setMobileMenuOpen(false)}>
+              Auctions
+            </Link>
           </nav>
 
           <div className="landing-mobile-drawer__actions">
+            <a
+              href={CONTACT.phoneHref}
+              className="landing-btn landing-btn--primary landing-btn--block"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Call Now
+            </a>
             {!user && (
               <>
                 <button
