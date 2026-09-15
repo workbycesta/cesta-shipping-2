@@ -1,85 +1,5 @@
 /* Auth: signup page additions + sign-in modal refresh. */
 
-.auth-steps {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.auth-step {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--wl-muted);
-  background: var(--wl-bg-alt);
-  border: 1px solid var(--wl-line);
-  border-radius: 20px;
-  padding: 6px 16px;
-}
-
-.auth-step.active {
-  background: var(--wl-brand);
-  border-color: var(--wl-brand);
-  color: #fff;
-}
-
-.auth-step.done {
-  background: var(--wl-success-bg);
-  border-color: var(--wl-success-line);
-  color: var(--wl-success);
-}
-
-.auth-step__line {
-  width: 32px;
-  height: 2px;
-  background: var(--wl-line);
-}
-
-.auth-mobile-row {
-  display: flex;
-  gap: 8px;
-}
-
-.auth-mobile-row .wl-input {
-  flex: 1;
-  min-width: 0;
-}
-
-.auth-mobile-row .wl-btn {
-  flex-shrink: 0;
-  align-self: center;
-}
-
-.auth-otp-box {
-  background: var(--wl-brand-soft);
-  border: 1px solid var(--wl-info-line);
-  border-radius: 10px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.auth-otp-msg {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--wl-ink);
-  margin: 0;
-}
-
-.auth-otp-row {
-  display: flex;
-  gap: 8px;
-}
-
-.auth-otp-input {
-  flex: 1;
-  letter-spacing: 4px;
-  font-size: 16px;
-  text-align: center;
-}
-
 .auth-terms {
   display: flex;
   align-items: center;
@@ -140,6 +60,159 @@
   border-radius: 8px;
   padding: 10px 16px;
   font-size: 14px;
+}
+
+.auth-result {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+
+.auth-result__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--wl-brand);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(126, 27, 30, 0.3);
+}
+
+.auth-result h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--wl-ink);
+}
+
+.auth-result__lead {
+  font-size: 15px;
+  color: var(--wl-body);
+  max-width: 460px;
+}
+
+.auth-result__timeline {
+  width: 100%;
+  background: var(--wl-bg-alt);
+  border: 1px solid var(--wl-line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+
+.auth-result__step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 10px 0;
+  position: relative;
+  opacity: 0.55;
+}
+
+.auth-result__step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 42px;
+  bottom: -6px;
+  width: 2px;
+  background: var(--wl-line-dark);
+}
+
+.auth-result__step div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.auth-result__step strong {
+  font-size: 14px;
+  color: var(--wl-ink);
+}
+
+.auth-result__step span {
+  font-size: 13px;
+  color: var(--wl-muted);
+}
+
+.auth-result__dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--wl-line-dark);
+  color: var(--wl-muted);
+}
+
+.auth-result__step.done {
+  opacity: 1;
+}
+
+.auth-result__step.done .auth-result__dot {
+  background: var(--wl-success-bg);
+  border-color: var(--wl-success-line);
+  color: var(--wl-success);
+}
+
+.auth-result__step.active {
+  opacity: 1;
+}
+
+.auth-result__step.active .auth-result__dot {
+  background: var(--wl-brand);
+  border-color: var(--wl-brand);
+  color: #fff;
+}
+
+.auth-result__note {
+  background: var(--wl-brand-soft);
+  border: 1px solid var(--wl-info-line);
+  color: var(--wl-ink);
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.auth-result__note strong {
+  color: var(--wl-brand);
+}
+
+.auth-result__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.auth-result__help {
+  font-size: 13px;
+  color: var(--wl-muted);
+}
+
+.auth-result__help strong {
+  color: var(--wl-brand);
+  font-weight: 600;
 }
 
 /* ---------- Sign-in modal ---------- */

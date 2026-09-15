@@ -883,21 +883,11 @@ async function updateTrader(id, updates) {
   return null
 }
 
-function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000))
-}
-
-function maskMobile(mobile) {
-  const m = String(mobile || '')
-  return m.length === 10 ? `${m.slice(0, 2)}XXXXX${m.slice(7)}` : m
-}
-
-// Buyer Registration (mirrors b4traders signUp form)
+// Buyer Registration: plain form, no OTP. Account lands in admin panel as pending.
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, mobile, password, organisationName, termsAccepted } = req.body || {}
 
-    // Same mandatory fields as b4traders: Name*, Mobile Number*, Password*, Terms acceptance
     if (!name || !String(name).trim()) {
       return res.status(400).json({ message: 'Name is required' })
     }
@@ -917,23 +907,22 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const existing = await findTraderByEmail(cleanEmail)
-    const otp = generateOtp()
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000)
 
     if (existing) {
-      if (existing.mobileVerified && existing.status !== 'rejected') {
+      if (existing.status !== 'rejected') {
         return res.status(409).json({ message: 'An account with this email already exists' })
       }
-      // Unverified (or previously rejected) signup: allow re-registration with fresh OTP
+      // Previously rejected signup: allow re-registration, back to pending
       const updates = {
         name: String(name).trim(),
         mobile: String(mobile).trim(),
         password: String(password),
         organisationName: String(organisationName || '').trim(),
         termsAccepted: true,
+        mobileVerified: true,
         status: 'pending',
-        otp,
-        otpExpiresAt: otpExpiry,
+        otp: '',
+        otpExpiresAt: null,
         createdAt: new Date(),
         reviewedAt: null
       }
@@ -943,12 +932,9 @@ app.post('/api/auth/register', async (req, res) => {
         const idx = memoryTraders.findIndex(t => t.email === cleanEmail)
         memoryTraders[idx] = { ...existing, ...updates }
       }
-      console.log(`[OTP] for ${cleanEmail} (${maskMobile(mobile)}): ${otp}`)
       return res.json({
         success: true,
-        message: 'OTP sent to your mobile number. Please verify to complete registration.',
-        devOtp: otp, // internal project: OTP surfaced for testing (no real SMS gateway)
-        mobile: maskMobile(mobile)
+        message: 'Registration complete! Your account is now awaiting admin approval.'
       })
     }
 
@@ -959,10 +945,10 @@ app.post('/api/auth/register', async (req, res) => {
       password: String(password),
       organisationName: String(organisationName || '').trim(),
       termsAccepted: true,
-      mobileVerified: false,
+      mobileVerified: true,
       status: 'pending',
-      otp,
-      otpExpiresAt: otpExpiry,
+      otp: '',
+      otpExpiresAt: null,
       createdAt: new Date(),
       reviewedAt: null
     }
@@ -975,12 +961,9 @@ app.post('/api/auth/register', async (req, res) => {
       memoryTraders.push(traderData)
     }
 
-    console.log(`[OTP] for ${cleanEmail} (${maskMobile(mobile)}): ${otp}`)
     res.json({
       success: true,
-      message: 'OTP sent to your mobile number. Please verify to complete registration.',
-      devOtp: otp, // internal project: OTP surfaced for testing (no real SMS gateway)
-      mobile: maskMobile(mobile)
+      message: 'Registration complete! Your account is now awaiting admin approval.'
     })
   } catch (err) {
     console.error('Registration error:', err)
@@ -991,60 +974,14 @@ app.post('/api/auth/register', async (req, res) => {
   }
 })
 
-// Verify mobile OTP -> registration complete, waiting for admin approval
+// Legacy OTP endpoints (kept for backwards compatibility — no-ops now)
 app.post('/api/auth/verify-otp', async (req, res) => {
-  try {
-    const { email, otp } = req.body || {}
-    const trader = await findTraderByEmail(email)
-    if (!trader) {
-      return res.status(404).json({ message: 'Registration not found. Please sign up first.' })
-    }
-    if (trader.mobileVerified) {
-      return res.json({ success: true, message: 'Mobile already verified.' })
-    }
-    if (!trader.otp || String(otp) !== String(trader.otp)) {
-      return res.status(400).json({ message: 'Invalid OTP. Please try again.' })
-    }
-    if (trader.otpExpiresAt && new Date(trader.otpExpiresAt) < new Date()) {
-      return res.status(400).json({ message: 'OTP expired. Please request a new one.' })
-    }
-    await updateTrader(trader._id ? trader._id.toString() : trader.id, {
-      mobileVerified: true,
-      otp: '',
-      otpExpiresAt: null
-    })
-    res.json({
-      success: true,
-      message: 'Registration complete! Your account is now awaiting admin approval. You will be able to sign in once approved.'
-    })
-  } catch (err) {
-    console.error('OTP verification error:', err)
-    res.status(500).json({ message: 'OTP verification failed', error: err.message })
-  }
+  return res.json({ success: true, message: 'Mobile verification is no longer required.' })
 })
 
-// Resend OTP
+// Legacy resend-OTP endpoint (kept for backwards compatibility — no-op now)
 app.post('/api/auth/resend-otp', async (req, res) => {
-  try {
-    const { email } = req.body || {}
-    const trader = await findTraderByEmail(email)
-    if (!trader) {
-      return res.status(404).json({ message: 'Registration not found. Please sign up first.' })
-    }
-    if (trader.mobileVerified) {
-      return res.json({ success: true, message: 'Mobile already verified.' })
-    }
-    const otp = generateOtp()
-    await updateTrader(trader._id ? trader._id.toString() : trader.id, {
-      otp,
-      otpExpiresAt: new Date(Date.now() + 10 * 60 * 1000)
-    })
-    console.log(`[OTP] resent for ${trader.email}: ${otp}`)
-    res.json({ success: true, message: 'A new OTP has been sent.', devOtp: otp, mobile: maskMobile(trader.mobile) })
-  } catch (err) {
-    console.error('Resend OTP error:', err)
-    res.status(500).json({ message: 'Failed to resend OTP', error: err.message })
-  }
+  return res.json({ success: true, message: 'Mobile verification is no longer required.' })
 })
 
 // ---------- Admin: buyer account management ----------
@@ -1103,9 +1040,6 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 
-    if (!trader.mobileVerified) {
-      return res.status(403).json({ message: 'Please complete mobile verification (OTP) first.', code: 'VERIFY_OTP' })
-    }
     if (trader.status === 'pending') {
       return res.status(403).json({ message: 'Your account is awaiting admin approval. Please try again later.', code: 'PENDING' })
     }

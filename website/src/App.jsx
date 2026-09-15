@@ -154,7 +154,7 @@ function AdminTradersSection() {
                   {t.organisationName ? <span className="trader-org"> — {t.organisationName}</span> : null}
                 </div>
                 <div className="trader-meta">✉ {t.email}</div>
-                <div className="trader-meta">📞 {t.mobile} {t.mobileVerified ? '✅ verified' : '⏳ unverified'}</div>
+                <div className="trader-meta">📞 {t.mobile}</div>
                 <div className="trader-meta">🗓 Registered: {new Date(t.createdAt).toLocaleString()}</div>
               </div>
               <div className="trader-actions">
