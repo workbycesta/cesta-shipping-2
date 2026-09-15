@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { usePrice } from './usePrice'
 import { useUser } from './UserContext'
 import { displayCity } from './displayCity'
+import { displayMarketplaceName, displayOrgImageUrl } from './displayMarketplace'
 import SiteHeader, { SiteFooter } from './SiteChrome'
 import './theme.css'
 import './ProductDetail.css'
@@ -382,7 +383,7 @@ export default function ProductDetailPage() {
             <>
               <Link to="/marketplaces">Marketplaces</Link>
               <span className="wl-crumb-sep">/</span>
-              <Link to={backPath}>{orgName}</Link>
+              <Link to={backPath}>{displayMarketplaceName(orgName)}</Link>
               <span className="wl-crumb-sep">/</span>
             </>
           ) : (
@@ -454,7 +455,7 @@ export default function ProductDetailPage() {
               {lotSummary.org_image_url && (
                 <div className="pdp-source">
                   <span className="pdp-source__label">Sourced from</span>
-                  <img src={lotSummary.org_image_url} alt="Source marketplace" className="pdp-source__logo" loading="lazy" />
+                  <img src={displayOrgImageUrl(lotSummary.org_image_url)} alt="Source marketplace" className="pdp-source__logo" loading="lazy" />
                 </div>
               )}
 

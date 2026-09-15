@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { displayMarketplaceName, displayMarketplaceImage } from '../../displayMarketplace'
 import { IconArrowRight } from './LandingIcons'
 
 export default function MarketplacesSection() {
@@ -58,18 +59,20 @@ export default function MarketplacesSection() {
           <div className="landing-marketplaces__grid">
             {marketplaces.map((mp, idx) => {
               const orgPath = mp.marketplace_name || mp.id
+              const displayName = displayMarketplaceName(mp)
+              const displayImage = displayMarketplaceImage(mp)
               return (
                 <Link
                   key={mp.id || idx}
                   to={`/${orgPath}/products`}
                   className="landing-marketplace-card"
                 >
-                  {mp.image_url && (
-                    <img src={mp.image_url} alt={mp.name || 'Marketplace'} className="landing-marketplace-card__logo" />
+                  {displayImage && (
+                    <img src={displayImage} alt={displayName || 'Marketplace'} className="landing-marketplace-card__logo" />
                   )}
                   <div>
                     <strong className="landing-marketplace-card__name">
-                      {mp.name || orgPath}
+                      {displayName || orgPath}
                     </strong>
                     <span className="landing-marketplace-card__lots">
                       {mp.active_lots || 0} active lots

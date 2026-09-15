@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { usePrice } from './usePrice'
 import { displayCity } from './displayCity'
+import { displayMarketplaceName, displayOrgImageUrl } from './displayMarketplace'
 import SiteHeader, { SiteFooter } from './SiteChrome'
 import './theme.css'
 import './ShopPage.css'
@@ -94,7 +95,7 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
           <span className="lot-card__timer ended">Ended</span>
         )}
         {product.org_image_url && (
-          <img src={product.org_image_url} alt="" className="lot-card__org" loading="lazy" />
+          <img src={displayOrgImageUrl(product.org_image_url)} alt="" className="lot-card__org" loading="lazy" />
         )}
       </div>
 
@@ -508,7 +509,7 @@ export default function ShopPage() {
             <>
               <Link to="/marketplaces">Marketplaces</Link>
               <span className="wl-crumb-sep">/</span>
-              <span className="wl-crumb-current">{orgName}</span>
+              <span className="wl-crumb-current">{displayMarketplaceName(orgName)}</span>
             </>
           ) : (
             <span className="wl-crumb-current">All Auctions</span>
@@ -517,7 +518,7 @@ export default function ShopPage() {
 
         <div className="wl-page-head">
           <div>
-            <h1>{orgName ? `${orgName} Lots` : 'All Live Auctions'}</h1>
+            <h1>{orgName ? `${displayMarketplaceName(orgName)} Lots` : 'All Live Auctions'}</h1>
             <p className="wl-sub">
               {orgName
                 ? 'Live lots from this marketplace. Bid before the timer runs out.'

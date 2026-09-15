@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { displayMarketplaceName, displayMarketplaceImage } from './displayMarketplace'
 import SiteHeader, { SiteFooter } from './SiteChrome'
 import './theme.css'
 import './Marketplaces.css'
@@ -85,18 +86,20 @@ export default function MarketplacesPage() {
           <div className="mp-grid">
             {marketplaces.map((mp, idx) => {
               const orgPath = mp.marketplace_name || mp.id
+              const displayName = displayMarketplaceName(mp)
+              const displayImage = displayMarketplaceImage(mp)
               return (
                 <div key={mp.id || idx} className="mp-card">
                   <div className="mp-card__body">
-                    {mp.image_url ? (
-                      <img src={mp.image_url} alt={mp.name || orgPath} className="mp-card__logo" loading="lazy" />
+                    {displayImage ? (
+                      <img src={displayImage} alt={displayName || orgPath} className="mp-card__logo" loading="lazy" />
                     ) : (
                       <div className="mp-card__logo mp-card__logo--fallback">
-                        {(mp.name || orgPath || '?')[0].toUpperCase()}
+                        {(displayName || orgPath || '?')[0].toUpperCase()}
                       </div>
                     )}
                     <div className="mp-card__info">
-                      <h3>{mp.name || orgPath}</h3>
+                      <h3>{displayName || orgPath}</h3>
                       <span className="mp-card__lots">
                         {mp.active_lots || 0} active lots
                       </span>
