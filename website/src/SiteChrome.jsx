@@ -102,7 +102,6 @@ export function SiteFooter() {
             and surplus inventory — traded by the pallet and truckload.
           </p>
           <div className="site-footer__contact">
-            <p><strong>Phone:</strong> 1800-419-0431</p>
             <p><strong>Email:</strong> support@lotmart.com</p>
           </div>
         </div>

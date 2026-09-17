@@ -22,6 +22,22 @@ function formatTimerHero(seconds) {
   return `${pad(h)} Hr ${pad(m)} Min ${pad(sec)} Sec`
 }
 
+function mergeInventoriesByName(items) {
+  const groups = new Map()
+  for (const item of items || []) {
+    const name = (item?.description || item?.title || 'Unnamed item').trim()
+    const key = name.toLowerCase()
+    const qty = Number(item?.quantity) || 0
+    if (!groups.has(key)) {
+      groups.set(key, { name, quantity: 0, mrp: Number(item?.mrp) || 0, id: item?.id })
+    }
+    const group = groups.get(key)
+    group.quantity += qty
+    if (!group.mrp && item?.mrp) group.mrp = Number(item.mrp) || 0
+  }
+  return [...groups.values()]
+}
+
 export default function ProductDetailPage() {
   const { id: paramId, orgName } = useParams()
   const navigate = useNavigate()
@@ -562,31 +578,48 @@ export default function ProductDetailPage() {
                 </button>
               </div>
 
-              {!user && (
-                <div className="pdp-signin-nudge">
-                  <button type="button" className="wl-chip-clear" onClick={openSignInModal}>
-                    Sign in to bid on this lot →
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="pdp-trust">
-              <div className="pdp-trust__item">
-                <strong>Itemized manifest</strong>
-                <span>Every SKU listed before you bid</span>
-              </div>
-              <div className="pdp-trust__item">
-                <strong>Stated condition</strong>
-                <span>{lotSummary.grade_name} grade on this lot</span>
-              </div>
-              <div className="pdp-trust__item">
-                <strong>Open bidding</strong>
-                <span>Visible bid history, highest wins</span>
-              </div>
             </div>
           </div>
         </div>
+
+        <section className="pdp-section pdp-feedback-section">
+          <h2>Not bidding? Tell us why</h2>
+          {feedbackSubmitted ? (
+            <p className="pdp-feedback-thanks">Thank you for your feedback.</p>
+          ) : (
+            <form onSubmit={handleFeedbackSubmit} className="pdp-feedback-form">
+              <div className="pdp-feedback-options">
+                {[
+                  'Lot too small',
+                  'Lot too large',
+                  'Logistics cost is too high',
+                  'Lot mix not good',
+                  'Manifest not clear',
+                  'No grading details',
+                  'Pricing not attractive'
+                ].map((reason) => (
+                  <label key={reason} className="pdp-feedback-option">
+                    <input
+                      type="radio"
+                      name="feedback-reason"
+                      value={reason}
+                      checked={selectedReason === reason}
+                      onChange={(e) => setSelectedReason(e.target.value)}
+                    />
+                    <span>{reason}</span>
+                  </label>
+                ))}
+              </div>
+              <button type="submit" className="wl-btn wl-btn-secondary wl-btn-sm pdp-action-btn" disabled={!selectedReason}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+                Submit Feedback
+              </button>
+            </form>
+          )}
+        </section>
 
         <section className="pdp-section">
           <h2>Lot details</h2>
@@ -699,35 +732,23 @@ export default function ProductDetailPage() {
                 <table className="pdp-table pdp-manifest-table">
                   <thead>
                     <tr>
-                      <th>Item</th>
-                      <th>Description</th>
-                      <th>Brand</th>
-                      <th>Category</th>
-                      <th>Qty</th>
+                      <th>Product name</th>
+                      <th>Quantity</th>
                       <th>MRP</th>
                     </tr>
                   </thead>
                   <tbody>
                     {inventories && inventories.length > 0 ? (
-                      inventories.map((prod) => (
-                        <tr key={prod.id}>
-                          <td>
-                            {prod.image_urls && prod.image_urls.length > 0 ? (
-                              <img src={prod.image_urls[0]} alt="" className="pdp-item-thumb" loading="lazy" />
-                            ) : (
-                              <span className="pdp-item-thumb pdp-item-thumb--empty">—</span>
-                            )}
-                          </td>
-                          <td className="pdp-item-desc">{prod.description}</td>
-                          <td>{prod.brand}</td>
-                          <td>{prod.category}</td>
+                      mergeInventoriesByName(inventories).map((prod, idx) => (
+                        <tr key={prod.id || idx}>
+                          <td className="pdp-item-desc">{prod.name}</td>
                           <td>{prod.quantity}</td>
                           <td className="pdp-item-mrp">{formatRawMoney(prod.mrp)}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="pdp-muted" style={{ textAlign: 'center', padding: 24 }}>
+                        <td colSpan="3" className="pdp-muted" style={{ textAlign: 'center', padding: 24 }}>
                           No product items found for this lot.
                         </td>
                       </tr>
@@ -777,40 +798,6 @@ export default function ProductDetailPage() {
             <div className="pdp-info-card">
               <h3>Delivery</h3>
               <p>{lotSummary.lot_description || 'Delivery between 2 to 3 working days after full payment.'}</p>
-            </div>
-            <div className="pdp-info-card">
-              <h3>Not bidding? Tell us why</h3>
-              {feedbackSubmitted ? (
-                <p className="pdp-feedback-thanks">Thank you for your feedback.</p>
-              ) : (
-                <form onSubmit={handleFeedbackSubmit} className="pdp-feedback-form">
-                  <div className="pdp-feedback-options">
-                    {[
-                      'Lot too small',
-                      'Lot too large',
-                      'Logistics cost is too high',
-                      'Lot mix not good',
-                      'Manifest not clear',
-                      'No grading details',
-                      'Pricing not attractive'
-                    ].map((reason) => (
-                      <label key={reason} className="pdp-feedback-option">
-                        <input
-                          type="radio"
-                          name="feedback-reason"
-                          value={reason}
-                          checked={selectedReason === reason}
-                          onChange={(e) => setSelectedReason(e.target.value)}
-                        />
-                        <span>{reason}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <button type="submit" className="wl-btn wl-btn-secondary wl-btn-sm" disabled={!selectedReason}>
-                    Submit Feedback
-                  </button>
-                </form>
-              )}
             </div>
           </div>
         </section>

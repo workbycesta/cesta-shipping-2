@@ -26,3 +26,7 @@
 - Prefers action buttons to pair meaningful icons with text labels rather than text-only buttons to improve scannability and UX. Confidence: 0.85
 - Prefers input placeholder/hint text to be visually de-emphasized with lighter weight and lower opacity so it is not mistaken for a clickable button/value. Confidence: 0.8
 - Prefers wide tables and dense content to remain horizontally scrollable/swipeable on mobile rather than clipped or truncated. Confidence: 0.85
+- Prefers lean inventory / manifest tables showing only product name, quantity, and MRP, removing secondary columns like brand, category, thumbnails, and descriptions from the UI. Confidence: 0.85
+- Prefers duplicate inventory lines to be merged by normalized product name (case-insensitive) into a single row with quantities summed. Confidence: 0.85
+- Prefers streamlined product detail pages without marketing trust-badge blocks and sign-in nudges cluttering the bidding flow. Confidence: 0.8
+- Prefers loss-feedback section (Not bidding? Tell us why) placed immediately below the bidding action as a standalone section rather than buried in lower info grids. Confidence: 0.8
