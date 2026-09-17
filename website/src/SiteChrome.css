@@ -17,6 +17,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  min-width: 0;
+  width: 100%;
 }
 
 .site-logo {
@@ -289,6 +291,49 @@
 @media (max-width: 900px) {
   .site-nav {
     display: none;
+  }
+
+  .site-header__inner {
+    gap: 12px;
+    padding: 0 14px;
+  }
+
+  .site-logo__img {
+    height: 36px;
+    max-width: 150px;
+  }
+
+  .site-logo__badge {
+    display: none;
+  }
+
+  .site-header__actions {
+    gap: 6px;
+    min-width: 0;
+    flex-shrink: 0;
+  }
+
+  .site-signin {
+    padding: 8px 4px;
+    white-space: nowrap;
+  }
+
+  .site-user {
+    min-width: 0;
+  }
+
+  .site-user__btn {
+    max-width: 150px;
+  }
+
+  .site-user__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .site-user__dropdown {
+    width: min(230px, calc(100vw - 28px));
   }
 
   .site-footer__top {

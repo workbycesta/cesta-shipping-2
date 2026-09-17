@@ -73,13 +73,20 @@
   max-width: 720px;
   margin: 32px auto;
   padding: 0 20px;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .admin-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
+  min-width: 0;
 }
 
 .admin-header h1 {
@@ -103,6 +110,8 @@
   padding: 24px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-section h2 {
@@ -132,6 +141,7 @@
   border-radius: 4px;
   font-size: 15px;
   width: 160px;
+  max-width: 100%;
 }
 
 .admin-unit {
@@ -189,12 +199,20 @@
   border-radius: 8px;
   padding: 14px 18px;
   background: #fff;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.trader-info {
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .trader-name {
   font-weight: 700;
   color: #5f1315;
   font-size: 15px;
+  overflow-wrap: anywhere;
 }
 
 .trader-org {
@@ -206,12 +224,14 @@
   font-size: 13px;
   color: #5a6b82;
   margin-top: 3px;
+  overflow-wrap: anywhere;
 }
 
 .trader-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .admin-approve-btn,
@@ -253,13 +273,15 @@
   flex-direction: column;
   gap: 8px;
   margin: 18px 0 4px;
+  min-width: 0;
 }
 
 .hike-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 90px 36px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 90px 36px;
   gap: 10px;
   align-items: center;
+  min-width: 0;
 }
 
 .hike-row input {
@@ -268,6 +290,8 @@
   border-radius: 4px;
   font-size: 14px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
 }
 
@@ -319,6 +343,8 @@
   align-items: center;
   gap: 14px;
   margin-top: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .range-status {
@@ -382,8 +408,32 @@
   background: #f6f8fb;
   border-radius: 6px;
   padding: 6px 10px;
+  overflow-wrap: anywhere;
 }
 
 .section-activity-time {
   color: #888;
+}
+
+@media (max-width: 560px) {
+  .admin-page {
+    margin: 20px auto;
+    padding: 0 12px;
+  }
+
+  .admin-section {
+    padding: 18px 14px;
+  }
+
+  .trader-card {
+    padding: 12px 14px;
+  }
+
+  .hike-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .hike-row-head {
+    display: none;
+  }
 }

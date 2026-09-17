@@ -7,13 +7,14 @@
   justify-content: space-between;
   flex-wrap: wrap;
   margin-bottom: 16px;
+  min-width: 0;
 }
 
 .shop-search {
   display: flex;
   gap: 8px;
-  flex: 1;
-  min-width: 260px;
+  flex: 1 1 220px;
+  min-width: 0;
   max-width: 560px;
 }
 
@@ -39,6 +40,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .shop-sort {
@@ -48,6 +51,11 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--wl-muted);
+  min-width: 0;
+}
+
+.shop-sort .wl-select {
+  max-width: 100%;
 }
 
 .shop-filters-toggle {
@@ -56,9 +64,10 @@
 
 .shop-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 20px;
   align-items: start;
+  min-width: 0;
 }
 
 .shop-sidebar {
@@ -205,6 +214,7 @@
 /* ---------- Lot cards ---------- */
 .shop-results {
   min-width: 0;
+  max-width: 100%;
 }
 
 .shop-grid {
@@ -516,7 +526,43 @@
 }
 
 @media (max-width: 600px) {
+  .shop-search {
+    flex-basis: 100%;
+    max-width: 100%;
+  }
+
+  .shop-search .wl-btn {
+    flex-shrink: 0;
+  }
+
+  .shop-toolbar__right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
   .shop-grid {
     grid-template-columns: 1fr;
+  }
+
+  .lot-card__media {
+    height: 190px;
+  }
+
+  .lot-card__price-val {
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 380px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .lot-card__specs {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .lot-card__foot {
+    flex-wrap: wrap;
   }
 }

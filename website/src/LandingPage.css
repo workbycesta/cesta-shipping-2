@@ -26,6 +26,10 @@
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .lotmart-root h1,
@@ -50,6 +54,15 @@
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 24px;
+  min-width: 0;
+}
+
+.lotz-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  min-width: 0;
 }
 
 .text-center { text-align: center; }
@@ -176,6 +189,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  min-width: 0;
+  width: 100%;
 }
 
 .landing-logo {
@@ -257,6 +272,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .landing-btn--sm {
@@ -314,7 +331,7 @@
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
-  width: 230px;
+  width: min(230px, calc(100vw - 28px));
   background: #fff;
   border: 1px solid var(--wl-line);
   border-radius: var(--wl-radius);
@@ -1273,6 +1290,21 @@ textarea.form-input {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
+  min-width: 0;
+}
+
+.lotz-topbar__inner,
+.lotz-hero__content,
+.lotz-offerings__grid,
+.lotz-stats__grid,
+.lotz-why-grid,
+.lotz-cat-grid,
+.lotz-t-grid,
+.lotz-footer__top,
+.lotz-faq,
+.lotz-split,
+.lotz-brands {
+  min-width: 0;
 }
 
 .lotz-reveal {
@@ -1379,7 +1411,7 @@ textarea.form-input {
   align-items: center;
 }
 
-.lotz-topbar { background: var(--wl-brand); color: #fff; font-size: 12.5px; }
+.lotz-topbar { background: var(--wl-brand); color: #fff; font-size: 12.5px; overflow-x: clip; }
 .lotz-topbar__inner {
   display: flex;
   justify-content: space-between;
@@ -1387,9 +1419,10 @@ textarea.form-input {
   gap: 12px;
   padding-top: 8px;
   padding-bottom: 8px;
+  min-width: 0;
 }
-.lotz-topbar__right { display: flex; gap: 20px; align-items: center; }
-.lotz-topbar__item { display: inline-flex; align-items: center; gap: 6px; color: #fff; text-decoration: none; }
+.lotz-topbar__right { display: flex; gap: 20px; align-items: center; min-width: 0; }
+.lotz-topbar__item { display: inline-flex; align-items: center; gap: 6px; color: #fff; text-decoration: none; min-width: 0; }
 a.lotz-topbar__item:hover { text-decoration: underline; }
 
 .landing-header { background: #fff; }
@@ -1425,12 +1458,14 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 .lotz-hero__title {
   font-family: var(--lotz-heading);
   color: var(--lotz-char);
-  font-size: 76px;
+  font-size: clamp(2.4rem, 10vw, 4.75rem);
   font-weight: 800;
   line-height: 1.04;
   letter-spacing: -0.02em;
   margin: 0 0 22px;
   text-wrap: balance;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 .lotz-hero__accent { color: var(--wl-brand); }
 .lotz-hero__sub {
@@ -1612,7 +1647,7 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 .lotz-footer__bottom { padding: 16px 0 24px; border-top: 1px solid rgba(255, 255, 255, 0.12); font-size: 12.5px; }
 
 @media (max-width: 1024px) {
-  .lotz-hero__title { font-size: 58px; }
+  .lotz-hero__title { font-size: clamp(2.2rem, 9vw, 3.625rem); }
   .lotz-why-grid { grid-template-columns: repeat(2, 1fr); }
   .lotz-cat-grid, .lotz-t-grid { grid-template-columns: repeat(2, 1fr); }
   .lotz-faq { grid-template-columns: 1fr; gap: 32px; }
@@ -1628,19 +1663,33 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
 }
 
 @media (max-width: 560px) {
-  .lotz-topbar__inner { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .lotz-topbar__right { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .lotz-hero__content { padding-top: 72px; padding-bottom: 72px; }
-  .lotz-hero__title { font-size: 42px; }
+  .landing-header__inner { padding: 0 14px; gap: 12px; }
+  .landing-logo__img { height: 36px; max-width: 150px; }
+  .landing-header__actions .landing-btn--sm { padding: 8px 12px; }
+  .landing-signin-link { padding: 8px 4px; white-space: nowrap; }
+  .landing-user-btn { max-width: 150px; overflow: hidden; }
+  .lotz-container { padding: 0 16px; }
+  .landing-container { padding: 0 16px; }
+  .lotz-topbar__inner { align-items: flex-start; gap: 4px; }
+  .lotz-topbar__right { align-items: flex-start; gap: 4px; }
+  .lotz-hero__content { padding-top: 72px; padding-bottom: 72px; max-width: 100%; }
+  .lotz-hero__title { font-size: clamp(2.1rem, 11vw, 2.625rem); }
   .lotz-hero__sub { font-size: 16.5px; }
+  .lotz-hero__actions { width: 100%; }
+  .lotz-hero__actions .lotz-btn--lg { width: 100%; padding: 16px 20px; }
   .lotz-section, .lotz-final { padding: 52px 0; }
   .lotz-h2 { font-size: 1.6rem; }
   .lotz-why-grid, .lotz-cat-grid, .lotz-t-grid { grid-template-columns: 1fr; }
-  .lotz-brands { gap: 14px; overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; padding-bottom: 8px; }
+  .lotz-stats__grid strong { font-size: 1.6rem; overflow-wrap: anywhere; }
+  .lotz-brands { gap: 14px; overflow-x: auto; justify-content: flex-start; flex-wrap: nowrap; padding-bottom: 8px; max-width: 100%; }
   .lotz-brand-card { min-width: 150px; flex-shrink: 0; }
   .lotz-footer__top { grid-template-columns: 1fr; }
-  .lotz-btn { width: 100%; }
-  .lotz-btn-row .lotz-btn { flex: 1; }
+  .lotz-btn { width: 100%; max-width: 100%; }
+  .lotz-btn-row { width: 100%; }
+  .lotz-btn-row .lotz-btn { flex: 1; min-width: 0; }
+  .lotz-signup-cta .lotz-h2 { font-size: 1.9rem; }
+  .lotz-signup-cta .lotz-btn--lg { padding: 16px 20px; }
+  .lotz-offer { padding: 24px 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

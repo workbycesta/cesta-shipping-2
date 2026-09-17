@@ -42,6 +42,10 @@
   font-size: 14px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .wl-page h1,
@@ -62,6 +66,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 20px;
+  min-width: 0;
 }
 
 .wl-main {
@@ -70,6 +75,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 20px 20px 48px;
+  min-width: 0;
 }
 
 /* ---------- Breadcrumb ---------- */
@@ -122,12 +128,19 @@
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 20px;
+  min-width: 0;
+}
+
+.wl-page-head > div {
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .wl-page-head h1 {
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .wl-page-head .wl-sub {
@@ -600,12 +613,29 @@
 }
 
 @media (max-width: 720px) {
+  .wl-page-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wl-page-head h1 {
+    font-size: 20px;
+  }
+
+  .wl-count-pill {
+    align-self: flex-start;
+  }
+
   .wl-main {
     padding: 14px 14px 36px;
   }
 
   .wl-container {
     padding: 0 14px;
+  }
+
+  .wl-auth-wrap {
+    padding: 32px 12px;
   }
 
   .wl-auth-card {

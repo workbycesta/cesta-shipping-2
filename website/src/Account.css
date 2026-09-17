@@ -10,12 +10,20 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.acct-head > div {
+  min-width: 0;
+  flex: 1 1 220px;
 }
 
 .acct-head h1 {
   font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .acct-head .wl-sub {
@@ -26,9 +34,10 @@
 
 .acct-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 20px;
+  min-width: 0;
 }
 
 .acct-stat {
@@ -39,6 +48,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .acct-stat strong {
@@ -124,6 +134,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .acct-card {
@@ -135,6 +146,8 @@
   flex-direction: column;
   gap: 12px;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .acct-card:hover {
@@ -147,6 +160,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .acct-card__time {
@@ -158,6 +173,7 @@
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 .acct-card__thumb {
@@ -170,6 +186,11 @@
   flex-shrink: 0;
 }
 
+.acct-card__body > div {
+  min-width: 0;
+  flex: 1;
+}
+
 .acct-card__body h3 {
   font-size: 14px;
   font-weight: 700;
@@ -178,6 +199,7 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  overflow-wrap: anywhere;
 }
 
 .acct-card__lotid {
@@ -248,11 +270,32 @@
 }
 
 @media (max-width: 720px) {
+  .acct-head h1 {
+    font-size: 20px;
+  }
+
   .acct-stats {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .acct-stat {
+    padding: 12px;
+  }
+
+  .acct-stat strong {
+    font-size: 22px;
   }
 
   .acct-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .acct-card__amounts {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .acct-card__amounts strong {
+    overflow-wrap: anywhere;
   }
 }

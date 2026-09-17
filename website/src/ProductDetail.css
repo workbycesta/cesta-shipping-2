@@ -2,10 +2,11 @@
 
 .pdp-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 24px;
   align-items: start;
   margin-bottom: 32px;
+  min-width: 0;
 }
 
 /* ---------- Gallery ---------- */
@@ -15,11 +16,14 @@
   gap: 12px;
   position: sticky;
   top: 84px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdp-gallery__main {
   position: relative;
   height: 440px;
+  max-width: 100%;
   background: #fff;
   border: 1px solid var(--wl-line);
   border-radius: 12px;
@@ -27,6 +31,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 0;
 }
 
 .pdp-gallery__main img.pdp-gallery__main-img {
@@ -95,12 +100,13 @@
 
 .pdp-facts {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   background: #fff;
   border: 1px solid var(--wl-line);
   border-radius: 12px;
   padding: 14px;
+  min-width: 0;
 }
 
 .pdp-fact {
@@ -132,6 +138,7 @@
   flex-direction: column;
   gap: 12px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .pdp-buybox__main {
@@ -142,12 +149,15 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdp-title {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .pdp-price-block {
@@ -158,6 +168,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .pdp-price-row {
@@ -165,6 +176,8 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .pdp-price-label {
@@ -216,6 +229,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .pdp-bid-form > label {
@@ -271,11 +285,12 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .pdp-secondary-actions .wl-btn {
-  flex: 1;
-  min-width: 140px;
+  flex: 1 1 140px;
+  min-width: 0;
 }
 
 .pdp-signin-nudge {
@@ -286,8 +301,9 @@
 
 .pdp-trust {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  min-width: 0;
 }
 
 .pdp-trust__item {
@@ -317,6 +333,8 @@
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 20px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdp-section h2 {
@@ -336,9 +354,10 @@
 
 .pdp-breakdown {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   margin-top: 16px;
+  min-width: 0;
 }
 
 .pdp-table-card h3 {
@@ -349,13 +368,16 @@
 
 .pdp-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   margin-top: 16px;
   border: 1px solid var(--wl-line);
   border-radius: 8px;
+  max-width: 100%;
 }
 
 .pdp-table {
   width: 100%;
+  min-width: 560px;
   border-collapse: collapse;
   font-size: 13.5px;
 }
@@ -393,12 +415,19 @@
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .pdp-manifest-actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pdp-manifest-actions .wl-btn {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .pdp-manifest-table td {
@@ -435,9 +464,10 @@
 
 .pdp-info-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 16px;
+  min-width: 0;
 }
 
 .pdp-info-card {
@@ -513,20 +543,52 @@
 }
 
 @media (max-width: 720px) {
+  .pdp-layout {
+    gap: 16px;
+  }
+
+  .pdp-gallery__main {
+    height: 300px;
+  }
+
+  .pdp-title {
+    font-size: 19px;
+  }
+
+  .pdp-price-floor {
+    font-size: 23px;
+  }
+
   .pdp-buybox__main {
-    padding: 18px;
+    padding: 18px 16px;
   }
 
   .pdp-breakdown,
   .pdp-info-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .pdp-section {
-    padding: 18px;
+    padding: 18px 16px;
   }
 
   .pdp-facts {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pdp-secondary-actions .wl-btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 380px) {
+  .pdp-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pdp-price-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
