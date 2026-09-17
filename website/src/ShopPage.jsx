@@ -358,12 +358,16 @@ export default function ShopPage() {
     && selectedSubCategories.length === 0
     && selectedConditions.length === 0
     && selectedLocations.length === 0
-    && !orgName
     && !priceRangeActive
 
-  const liveLotsCount = isDefaultView && meta.active_lots
-    ? meta.active_lots
-    : (meta.total_count || products.length)
+  const hasActiveFilter = !isDefaultView
+
+  // The filter API returns a real per-marketplace live count in `active_lots`
+  // (e.g. 269 for an org page); `meta.total_count` is a capped 10000 and must
+  // never be shown. With filters applied, show the filtered result count.
+  const liveLotsCount = hasActiveFilter
+    ? (meta.total_count || products.length)
+    : (meta.active_lots || products.length)
 
   const filtersPanel = (
     <div className="shop-filters">
