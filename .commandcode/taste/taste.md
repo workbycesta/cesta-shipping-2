@@ -24,3 +24,4 @@
 - Prefers external design references to be followed for layout/format but adapted to the app's existing brand theme colors rather than copying reference colors verbatim. Confidence: 0.8
 - Prefers action buttons to pair meaningful icons with text labels rather than text-only buttons to improve scannability and UX. Confidence: 0.85
 - Prefers input placeholder/hint text to be visually de-emphasized with lighter weight and lower opacity so it is not mistaken for a clickable button/value. Confidence: 0.8
+- Prefers wide tables and dense content to remain horizontally scrollable/swipeable on mobile rather than clipped or truncated. Confidence: 0.85

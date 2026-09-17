@@ -594,6 +594,7 @@ export default function ProductDetailPage() {
             <div className="pdp-table-card">
               <h3>Top brands</h3>
               {topBrand && topBrand.length > 0 ? (
+                <div className="pdp-table-wrap">
                 <table className="pdp-table">
                   <thead>
                     <tr>
@@ -612,6 +613,7 @@ export default function ProductDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               ) : (
                 <p className="pdp-muted">No brand breakdown available.</p>
               )}
@@ -620,6 +622,7 @@ export default function ProductDetailPage() {
             <div className="pdp-table-card">
               <h3>Top categories</h3>
               {topCategory && topCategory.length > 0 ? (
+                <div className="pdp-table-wrap">
                 <table className="pdp-table">
                   <thead>
                     <tr>
@@ -638,6 +641,7 @@ export default function ProductDetailPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               ) : (
                 <p className="pdp-muted">No category breakdown available.</p>
               )}
