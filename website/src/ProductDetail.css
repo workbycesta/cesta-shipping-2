@@ -29,14 +29,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--wl-brand);
   color: #fff;
-  font-size: 20px;
+  font-size: 16.5px;
   font-weight: 800;
   letter-spacing: 0.01em;
-  padding: 11px 30px;
-  border-radius: 12px 12px 0 0;
+  padding: 8px 24px;
+  border-radius: 10px 10px 0 0;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   max-width: 100%;
@@ -54,7 +54,7 @@
   border: 1px solid var(--wl-line);
   border-bottom: none;
   box-shadow: none;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
 }
 
@@ -316,6 +316,24 @@
   color: var(--wl-ink);
 }
 
+.pdp-bid-row input::placeholder {
+  color: #b3a6a7;
+  font-weight: 400;
+  font-size: 15px;
+  opacity: 1;
+}
+
+.pdp-bid-row input::-webkit-input-placeholder {
+  color: #b3a6a7;
+  font-weight: 400;
+}
+
+.pdp-bid-row input::-moz-placeholder {
+  color: #b3a6a7;
+  font-weight: 400;
+  opacity: 1;
+}
+
 .pdp-bid-row input:focus {
   outline: 2px solid var(--wl-brand);
   outline-offset: -1px;
@@ -338,6 +356,14 @@
 .pdp-secondary-actions .wl-btn {
   flex: 1 1 140px;
   min-width: 0;
+}
+
+.pdp-action-btn {
+  gap: 8px;
+}
+
+.pdp-action-btn svg {
+  flex-shrink: 0;
 }
 
 .pdp-signin-nudge {

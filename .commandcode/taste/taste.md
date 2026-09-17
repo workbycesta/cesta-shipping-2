@@ -22,3 +22,5 @@
 - Prefers mobile-first responsiveness: ensure whole site is fully responsive on mobile (primary audience) while maintaining desktop/laptop compatibility, with no zoom-out/desktop-view or horizontal overflow on phones. Confidence: 0.9
 - Prefers business-critical elements (e.g., auction timer) to be given high first-glance prominence — large, centered, immediately eye-catching — rather than small side/corner placement. Confidence: 0.8
 - Prefers external design references to be followed for layout/format but adapted to the app's existing brand theme colors rather than copying reference colors verbatim. Confidence: 0.8
+- Prefers action buttons to pair meaningful icons with text labels rather than text-only buttons to improve scannability and UX. Confidence: 0.85
+- Prefers input placeholder/hint text to be visually de-emphasized with lighter weight and lower opacity so it is not mistaken for a clickable button/value. Confidence: 0.8

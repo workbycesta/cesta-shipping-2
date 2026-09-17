@@ -525,29 +525,6 @@
   margin-left: 10px;
 }
 
-/* ---------- WhatsApp FAB ---------- */
-.whatsapp-fab {
-  position: fixed;
-  right: 20px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #22c35e;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  text-decoration: none;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
-  z-index: 40;
-}
-
-.whatsapp-fab:hover {
-  background: #1da851;
-}
-
 /* ---------- Auth pages ---------- */
 .wl-auth-wrap {
   flex: 1;
