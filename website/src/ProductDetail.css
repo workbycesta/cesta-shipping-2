@@ -20,6 +20,53 @@
   max-width: 100%;
 }
 
+.pdp-timer-hero {
+  display: flex;
+  justify-content: center;
+}
+
+.pdp-timer-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--wl-brand);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  padding: 11px 30px;
+  border-radius: 12px 12px 0 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  max-width: 100%;
+  box-shadow: 0 -2px 12px rgba(126, 27, 30, 0.2);
+}
+
+.pdp-timer-pill.urgent {
+  background: var(--wl-danger);
+  animation: pdp-timer-pulse 1.2s ease-in-out infinite;
+}
+
+.pdp-timer-pill.ended {
+  background: var(--wl-bg-alt);
+  color: var(--wl-muted);
+  border: 1px solid var(--wl-line);
+  border-bottom: none;
+  box-shadow: none;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.pdp-timer-icon {
+  flex-shrink: 0;
+}
+
+@keyframes pdp-timer-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+}
+
 .pdp-gallery__main {
   position: relative;
   height: 440px;
@@ -545,6 +592,15 @@
 @media (max-width: 720px) {
   .pdp-layout {
     gap: 16px;
+  }
+
+  .pdp-timer-pill {
+    font-size: 17px;
+    padding: 10px 20px;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+    border-radius: 10px 10px 0 0;
   }
 
   .pdp-gallery__main {

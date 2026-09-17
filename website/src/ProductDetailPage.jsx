@@ -10,16 +10,16 @@ import './ProductDetail.css'
 
 const TIMER_OFFSET_SECONDS_FALLBACK = 60 * 60
 
-function formatTime(seconds) {
+function formatTimerHero(seconds) {
   if (!seconds || seconds <= 0) return 'Ended'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h >= 48) {
-    const d = Math.floor(h / 24)
-    return `${d}d ${h % 24}h ${String(m).padStart(2, '0')}m`
-  }
-  return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`
+  const s = Math.floor(seconds)
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  if (d > 0) return `${pad(d)}d ${pad(h)} Hr ${pad(m)} Min ${pad(sec)} Sec`
+  return `${pad(h)} Hr ${pad(m)} Min ${pad(sec)} Sec`
 }
 
 export default function ProductDetailPage() {
@@ -397,6 +397,22 @@ export default function ProductDetailPage() {
 
         <div className="pdp-layout">
           <div className="pdp-gallery">
+            <div className="pdp-timer-hero">
+              {biddingClosedEarly ? (
+                <span className="pdp-timer-pill ended">Bidding ended</span>
+              ) : remainingTime > 0 ? (
+                <span className={`pdp-timer-pill ${remainingTime <= 3600 ? 'urgent' : ''}`}>
+                  <svg className="pdp-timer-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="13" r="8" />
+                    <path d="M12 9v4l2.5 2.5" />
+                    <path d="M9 2h6" />
+                  </svg>
+                  {formatTimerHero(remainingTime)}
+                </span>
+              ) : (
+                <span className="pdp-timer-pill ended">Bidding ended</span>
+              )}
+            </div>
             <div className="pdp-gallery__main">
               {currentImage ? (
                 <img src={currentImage} alt={lotSummary.lot_name} className="pdp-gallery__main-img" />
@@ -442,14 +458,6 @@ export default function ProductDetailPage() {
 
           <div className="pdp-buybox">
             <div className="pdp-buybox__main">
-              {biddingClosedEarly ? (
-                <span className="wl-timer-badge ended">Bidding ended</span>
-              ) : remainingTime > 0 ? (
-                <span className="wl-timer-badge">Ends in {formatTime(remainingTime)}</span>
-              ) : (
-                <span className="wl-timer-badge ended">Bidding ended</span>
-              )}
-
               <h1 className="pdp-title">{lotSummary.lot_name}</h1>
 
               {lotSummary.org_image_url && (

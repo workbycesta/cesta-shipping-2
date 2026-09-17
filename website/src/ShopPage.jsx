@@ -17,28 +17,16 @@ const SORT_OPTIONS = [
 const TIMER_OFFSET_SECONDS_FALLBACK = 60 * 60
 const PER_PAGE = 24
 
-function formatTime(seconds) {
+function formatTimerHero(seconds) {
   if (!seconds || seconds <= 0) return 'Ended'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h >= 48) {
-    const d = Math.floor(h / 24)
-    return `${d}d ${h % 24}h left`
-  }
-  return `${h}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s left`
-}
-
-function formatCountdownShort(seconds) {
-  if (!seconds || seconds <= 0) return 'Ended'
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = Math.floor(seconds % 60)
-  if (h >= 48) {
-    const d = Math.floor(h / 24)
-    return `${d}d ${h % 24}h`
-  }
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  const s = Math.floor(seconds)
+  const d = Math.floor(s / 86400)
+  const h = Math.floor((s % 86400) / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  const pad = (n) => String(n).padStart(2, '0')
+  if (d > 0) return `${pad(d)}d ${pad(h)} Hr ${pad(m)} Min ${pad(sec)} Sec`
+  return `${pad(h)} Hr ${pad(m)} Min ${pad(sec)} Sec`
 }
 
 function toggleInArray(list, value) {
@@ -79,6 +67,21 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
       role="link"
       aria-label={product.lot_name}
     >
+      <div className="lot-card__timer-hero">
+        {remaining !== null && !ended ? (
+          <span className={`lot-card__timer-pill ${urgent ? 'urgent' : ''}`}>
+            <svg className="lot-card__timer-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="13" r="8" />
+              <path d="M12 9v4l2.5 2.5" />
+              <path d="M9 2h6" />
+            </svg>
+            {formatTimerHero(remaining)}
+          </span>
+        ) : (
+          <span className="lot-card__timer-pill ended">Ended</span>
+        )}
+      </div>
+
       <div className="lot-card__media">
         <img
           src={product.lot_image_urls?.[0] || ''}
@@ -86,14 +89,6 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
           className="lot-card__img"
           loading="lazy"
         />
-        {remaining !== null && !ended && (
-          <span className={`lot-card__timer ${urgent ? 'urgent' : ''}`}>
-            {formatCountdownShort(remaining)}
-          </span>
-        )}
-        {ended && (
-          <span className="lot-card__timer ended">Ended</span>
-        )}
         {product.org_image_url && (
           <img src={displayOrgImageUrl(product.org_image_url)} alt="" className="lot-card__org" loading="lazy" />
         )}
@@ -136,9 +131,6 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
 
         <div className="lot-card__foot">
           {product.delivery_by && <span>{product.delivery_by}</span>}
-          {remaining !== null && !ended && (
-            <span className="lot-card__time">{formatTime(remaining)}</span>
-          )}
         </div>
       </div>
     </article>
