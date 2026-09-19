@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AdminProvider, useAdmin } from './AdminContext'
 import LandingPage from './LandingPage'
 import MarketplacesPage from './MarketplacesPage'
@@ -757,9 +757,18 @@ function AdminPanel() {
 }
 
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AdminProvider>
         <UserProvider>
           <SignInModal />

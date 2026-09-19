@@ -9,7 +9,8 @@
 - Prefers site-wide theme (colors, fonts, styles) to be derived from the provided brand logo so the whole website matches the logo's palette. Confidence: 0.9
 - Prefers image logo assets over text-based brand names: use the provided header-logo image wherever the brand name appears (headers, footers, hero). Confidence: 0.9
 - Prefers the provided favicon asset to be wired as the site favicon rather than a default icon. Confidence: 0.9
-- Prefers issues to be fixed one by one sequentially with confirmation before moving to the next, rather than batching multiple fixes together. Confidence: 0.85
+- Prefers issues to be fixed one by one sequentially with confirmation before moving to the next, rather than batching multiple fixes together. Confidence: 0.9
+- Prefers agent to confirm that a reported issue is found/understood before applying a fix when reporting bugs in plain language. Confidence: 0.75
 - Prefers frictionless buyer signup: simple registration form that creates a pending entry directly in the admin panel, without OTP/mobile verification steps. Confidence: 0.85
 - Prefers data fidelity for display: show values exactly as returned by backend/API responses without frontend remapping or hardcoded overrides (e.g., no city name substitutions). Confidence: 0.85
 - Prefers to delegate UI/UX implementation details to the implementer once the required actions/content are specified (e.g., 'however u like in terms of ui and ux', 'u figure out what colour to have' to match app theme). Confidence: 0.8
