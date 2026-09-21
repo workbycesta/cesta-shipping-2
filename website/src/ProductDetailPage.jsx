@@ -160,7 +160,7 @@ export default function ProductDetailPage() {
     const fetchInventories = async () => {
       setInventoryLoading(true)
       try {
-        const res = await fetch(`/api/lot_publishes/${lotId}/fetch_lot_inventories?per_page=24&page=${inventoryPage}`)
+        const res = await fetch(`/api/lot_publishes/${lotId}/fetch_lot_inventories?per_page=20&page=${inventoryPage}`)
         if (res.ok) {
           const data = await res.json()
           setInventories(data?.all_products || [])
@@ -431,7 +431,7 @@ export default function ProductDetailPage() {
             </div>
             <div className="pdp-gallery__main">
               {currentImage ? (
-                <img src={currentImage} alt={lotSummary.lot_name} className="pdp-gallery__main-img" />
+                <img src={currentImage} alt={lotSummary.lot_name} className="pdp-gallery__main-img" onError={(e) => { e.target.src = '/favicon.png' }} />
               ) : (
                 <div className="pdp-gallery__placeholder">No image available</div>
               )}
@@ -446,7 +446,7 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedImgIndex(idx)}
                     aria-label={`View image ${idx + 1}`}
                   >
-                    <img src={img} alt="" loading="lazy" />
+                    <img src={img} alt="" loading="lazy" onError={(e) => { e.target.src = '/favicon.png' }} />
                   </button>
                 ))}
               </div>
@@ -622,7 +622,7 @@ export default function ProductDetailPage() {
         </section>
 
         <section className="pdp-section">
-          <h2>Lot details</h2>
+          <h2 style={{ textAlign: 'center' }}>Lot details</h2>
           <div className="pdp-breakdown">
             <div className="pdp-table-card">
               <h3>Top brands</h3>

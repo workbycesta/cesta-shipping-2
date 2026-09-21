@@ -60,11 +60,11 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
 
   return (
     <article
-      className="lot-card"
-      onClick={() => navigate(detailPath)}
-      onKeyDown={(e) => { if (e.key === 'Enter') navigate(detailPath) }}
-      tabIndex={0}
-      role="link"
+      className={`lot-card${ended ? ' lot-card--ended' : ''}`}
+      onClick={ended ? undefined : () => navigate(detailPath)}
+      onKeyDown={ended ? undefined : (e) => { if (e.key === 'Enter') navigate(detailPath) }}
+      tabIndex={ended ? -1 : 0}
+      role={ended ? 'article' : 'link'}
       aria-label={product.lot_name}
     >
       <div className="lot-card__timer-hero">
@@ -88,9 +88,10 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
           alt={product.lot_name}
           className="lot-card__img"
           loading="lazy"
+          onError={(e) => { e.target.src = '/favicon.png' }}
         />
         {product.org_image_url && (
-          <img src={displayOrgImageUrl(product.org_image_url)} alt="" className="lot-card__org" loading="lazy" />
+          <img src={displayOrgImageUrl(product.org_image_url)} alt="" className="lot-card__org" loading="lazy" onError={(e) => { e.target.src = '/favicon.png' }} />
         )}
       </div>
 
@@ -126,7 +127,7 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
             <span className="lot-card__price-label">Floor Price</span>
             <strong className="lot-card__price-val">{formatMoney(product.floor_price)}</strong>
           </div>
-          <span className="lot-card__cta">View &amp; Bid →</span>
+          <span className={`lot-card__cta${ended ? ' lot-card__cta--ended' : ''}`}>{ended ? 'Bidding Ended' : 'View & Bid →'}</span>
         </div>
 
         <div className="lot-card__foot">

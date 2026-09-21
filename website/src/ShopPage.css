@@ -250,10 +250,26 @@
   outline-offset: 2px;
 }
 
+.lot-card--ended {
+  opacity: 0.7;
+  cursor: default;
+  background: var(--wl-bg-alt);
+}
+
+.lot-card--ended .lot-card__img {
+  filter: grayscale(1);
+}
+
+.lot-card--ended:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--wl-line);
+}
+
 .lot-card__media {
   position: relative;
   height: 210px;
-  background: var(--wl-bg-alt);
+  background: #fff;
   border-bottom: 1px solid var(--wl-line);
   display: flex;
   align-items: center;
@@ -423,6 +439,10 @@
 
 .lot-card:hover .lot-card__cta {
   color: var(--wl-brand);
+}
+
+.lot-card__cta--ended {
+  color: var(--wl-muted);
 }
 
 .lot-card__foot {

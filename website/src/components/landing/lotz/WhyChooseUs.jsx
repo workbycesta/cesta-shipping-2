@@ -7,11 +7,11 @@ const ICONS = [IconBox, IconShieldCheck, IconDollarSign, IconSearch, IconTruck, 
 export default function WhyChooseUs() {
   const ref = useReveal()
   return (
-    <section className="lotz-section lotz-section--dark" ref={ref}>
+    <section className="lotz-section" ref={ref}>
       <div className="lotz-container lotz-center">
-        <p className="lotz-eyebrow lotz-eyebrow--light lotz-reveal">Why Choose Us</p>
-        <h2 className="lotz-h2 lotz-h2--light lotz-reveal">Real Value. Real Savings. Real Solutions.</h2>
-        <p className="lotz-body lotz-body--light lotz-reveal">
+        <p className="lotz-eyebrow lotz-reveal">Why Choose Us</p>
+        <h2 className="lotz-h2 lotz-reveal">Real Value. Real Savings. Real Solutions.</h2>
+        <p className="lotz-body lotz-reveal">
           If you&rsquo;re looking for a reliable and trustworthy liquidation company in India, Lotmart should be your top choice.
         </p>
         <div className="lotz-why-grid">

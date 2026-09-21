@@ -275,9 +275,9 @@
 }
 
 .wl-badge-brand {
-  background: var(--wl-brand-soft);
-  border-color: var(--wl-info-line);
-  color: var(--wl-brand);
+  background: var(--wl-warning-bg);
+  border-color: var(--wl-warning-line);
+  color: var(--wl-warning);
 }
 
 .wl-badge-success {
