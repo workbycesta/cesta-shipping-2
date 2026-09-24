@@ -21,7 +21,7 @@ export default function MarketplacesPage() {
         if (!data || !data.marketplaces) {
           throw new Error('Invalid response from marketplaces API')
         }
-        setMarketplaces((data.marketplaces || []).filter((mp) => mp && Number(mp.active_lots) > 0))
+        setMarketplaces((data.marketplaces || []).filter((mp) => mp).sort((a, b) => Number(b.active_lots || 0) - Number(a.active_lots || 0)))
       } catch (err) {
         setError(err.message)
       } finally {

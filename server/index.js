@@ -1210,6 +1210,12 @@ app.post('/api/bids', async (req, res) => {
       return res.status(400).json({ message: 'Bidding for this lot was ended by the admin.' })
     }
 
+    // Block bids once our timer (b4 time minus the admin early-close offset) runs out.
+    const { ourRemaining } = await ourRemainingSecFor(lotId)
+    if (ourRemaining !== null && ourRemaining <= 0) {
+      return res.status(400).json({ message: 'Bidding for this lot has ended.' })
+    }
+
     // Enforce one ₹1,000 increment above the HIKED floor price server-side so it is
     // identical on every device: a bid exactly at the floor price is not enough.
     // Hiked floor is rounded up to the next ₹1,000 first, then +1000 (matches frontend).

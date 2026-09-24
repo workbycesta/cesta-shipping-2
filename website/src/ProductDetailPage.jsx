@@ -76,6 +76,7 @@ export default function ProductDetailPage() {
 
   const [allotInfo, setAllotInfo] = useState(null)
   const [biddingClosedEarly, setBiddingClosedEarly] = useState(false)
+  const isBiddingClosed = biddingClosedEarly || remainingTime <= 0
 
   useEffect(() => {
     if (!lotId) return
@@ -253,7 +254,7 @@ export default function ProductDetailPage() {
     e.preventDefault()
     setBiddingError('')
 
-    if (biddingClosedEarly) {
+    if (isBiddingClosed) {
       setBiddingError('Bidding for this lot has ended.')
       return
     }
@@ -414,7 +415,7 @@ export default function ProductDetailPage() {
         <div className="pdp-layout">
           <div className="pdp-gallery">
             <div className="pdp-timer-hero">
-              {biddingClosedEarly ? (
+              {isBiddingClosed ? (
                 <span className="pdp-timer-pill ended">Bidding ended</span>
               ) : remainingTime > 0 ? (
                 <span className={`pdp-timer-pill ${remainingTime <= 3600 ? 'urgent' : ''}`}>
@@ -540,11 +541,11 @@ export default function ProductDetailPage() {
                     placeholder={`Min. ${formatRawMoney(minBid)}`}
                     value={bidAmount}
                     onChange={(e) => setBidAmount(e.target.value)}
-                    disabled={biddingClosedEarly}
+                    disabled={isBiddingClosed}
                   />
                 </div>
-                <button type="submit" className="wl-btn wl-btn-primary wl-btn-block" disabled={submittingBid || biddingClosedEarly}>
-                  {biddingClosedEarly ? 'Bidding Ended' : submittingBid ? 'Placing Bid…' : 'Place Bid'}
+                <button type="submit" className="wl-btn wl-btn-primary wl-btn-block" disabled={submittingBid || isBiddingClosed}>
+                  {isBiddingClosed ? 'Bidding Ended' : submittingBid ? 'Placing Bid…' : 'Place Bid'}
                 </button>
                 <p className="pdp-bid-hint">Bids must be in multiples of ₹1,000 · Minimum {formatRawMoney(minBid)}</p>
 

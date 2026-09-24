@@ -61,10 +61,10 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
   return (
     <article
       className={`lot-card${ended ? ' lot-card--ended' : ''}`}
-      onClick={ended ? undefined : () => navigate(detailPath)}
-      onKeyDown={ended ? undefined : (e) => { if (e.key === 'Enter') navigate(detailPath) }}
-      tabIndex={ended ? -1 : 0}
-      role={ended ? 'article' : 'link'}
+      onClick={() => navigate(detailPath)}
+      onKeyDown={(e) => { if (e.key === 'Enter') navigate(detailPath) }}
+      tabIndex={0}
+      role="link"
       aria-label={product.lot_name}
     >
       <div className="lot-card__timer-hero">
@@ -127,7 +127,7 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
             <span className="lot-card__price-label">Floor Price</span>
             <strong className="lot-card__price-val">{formatMoney(product.floor_price)}</strong>
           </div>
-          <span className={`lot-card__cta${ended ? ' lot-card__cta--ended' : ''}`}>{ended ? 'Bidding Ended' : 'View & Bid →'}</span>
+          <span className={`lot-card__cta${ended ? ' lot-card__cta--ended' : ''}`}>{ended ? 'View Details →' : 'View & Bid →'}</span>
         </div>
 
         <div className="lot-card__foot">
