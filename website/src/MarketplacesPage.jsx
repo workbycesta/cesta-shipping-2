@@ -13,7 +13,7 @@ export default function MarketplacesPage() {
   useEffect(() => {
     const fetchMarketplaces = async () => {
       try {
-        const res = await fetch('/api/organizations/fetch_marketplace')
+        const res = await fetch('/api/marketplaces/merged')
         if (!res.ok) {
           throw new Error(`Failed to fetch marketplaces (${res.status})`)
         }

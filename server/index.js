@@ -618,6 +618,62 @@ app.get('/api/price-config', async (req, res) => {
   }
 })
 
+// Merged marketplace directory. b4traders' own /marketplace page combines two
+// sources: private org marketplaces from b4traders AND "Open" marketplaces from
+// beam.blubirch.com (Croma, Tata Cliq, Udaan, ...). Without the second source,
+// marketplaces like Croma never appear on our site. Entries are deduped by the
+// first name token (matching b4traders) so b4traders' own entry wins.
+let mergedMarketplacesCache = { data: null, at: 0 }
+const MARKETPLACE_CACHE_MS = 60 * 1000
+
+app.get('/api/marketplaces/merged', async (req, res) => {
+  try {
+    const now = Date.now()
+    if (mergedMarketplacesCache.data && now - mergedMarketplacesCache.at < MARKETPLACE_CACHE_MS) {
+      return res.json(mergedMarketplacesCache.data)
+    }
+
+    const b4Promise = fetch('https://www.b4traders.com/api/organizations/fetch_marketplace', {
+      headers: { Accept: 'application/json' }
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    const beamPromise = fetch('https://beam.blubirch.com/api/external_service/get_marketplaces', {
+      headers: { Accept: 'application/json', appversion: '2' }
+    }).then((r) => (r.ok ? r.json() : null)).catch(() => null)
+    const [b4Data, beamData] = await Promise.all([b4Promise, beamPromise])
+
+    const b4List = (b4Data?.marketplaces || []).filter((mp) => mp && mp.id)
+    const extList = (beamData?.external_service || [])
+      .filter((mp) => mp && mp.id)
+      .map((mp) => {
+        const slug = String(mp.card_url || '').split('/')[3] || String(mp.id)
+        return {
+          id: mp.id,
+          name: mp.name || slug,
+          marketplace_name: slug,
+          image_url: mp.image_url || '',
+          active_lots: Number(mp.active_lots) || 0,
+          organization_id: mp.id,
+          source: 'open'
+        }
+      })
+
+    const firstToken = (s) => String(s || '').trim().split(' ')[0]
+    const merged = [...b4List]
+    for (const ext of extList) {
+      const isDupe = merged.some((m) => m.name === ext.name || firstToken(m.name) === firstToken(ext.name))
+      if (!isDupe) merged.push(ext)
+    }
+
+    const data = { marketplaces: merged }
+    mergedMarketplacesCache = { data, at: now }
+    res.json(data)
+  } catch (err) {
+    console.error('Error fetching merged marketplaces:', err)
+    res.status(500).json({ message: 'Failed to fetch marketplaces', error: err.message })
+  }
+})
+
+
 // Admin endpoint: update the global pricing config (default hike, range hikes, timer earliness).
 // Price-hike saves and timer saves log under their own section/action so each
 // admin-panel section shows only its own activity.

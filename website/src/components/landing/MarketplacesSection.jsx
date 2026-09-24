@@ -11,7 +11,7 @@ export default function MarketplacesSection() {
     let cancelled = false
     const fetchMarketplaces = async () => {
       try {
-        const res = await fetch('/api/organizations/fetch_marketplace')
+        const res = await fetch('/api/marketplaces/merged')
         if (!res.ok) return
         const data = await res.json()
         if (!cancelled && data && data.marketplaces) {

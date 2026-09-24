@@ -34,6 +34,10 @@
       "destination": "https://cesta-shipping-2-production.up.railway.app/api/price-config"
     },
     {
+      "source": "/api/marketplaces/:path*",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/marketplaces/:path*"
+    },
+    {
       "source": "/api/lots/:path*",
       "destination": "https://www.b4traders.com/api/lots/:path*"
     },
