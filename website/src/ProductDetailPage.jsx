@@ -60,8 +60,6 @@ export default function ProductDetailPage() {
   const [selectedImgIndex, setSelectedImgIndex] = useState(0)
   const [remainingTime, setRemainingTime] = useState(0)
 
-  const [inventoryPage, setInventoryPage] = useState(1)
-
   const [bidAmount, setBidAmount] = useState('')
   const [bidSubmitted, setBidSubmitted] = useState(false)
   const [biddingError, setBiddingError] = useState('')
@@ -161,14 +159,26 @@ export default function ProductDetailPage() {
     const fetchInventories = async () => {
       setInventoryLoading(true)
       try {
-        const res = await fetch(`/api/lot_publishes/${lotId}/fetch_lot_inventories?per_page=20&page=${inventoryPage}`)
-        if (res.ok) {
+        const perPage = 100
+        let page = 1
+        let allProducts = []
+        let meta = null
+
+        while (true) {
+          const res = await fetch(`/api/lot_publishes/${lotId}/fetch_lot_inventories?per_page=${perPage}&page=${page}`)
+          if (!res.ok) break
+
           const data = await res.json()
-          setInventories(data?.all_products || [])
-          if (data?.meta) {
-            setInventoriesMeta(data.meta)
-          }
+          allProducts = allProducts.concat(data?.all_products || [])
+          meta = data?.meta || meta
+
+          const totalPages = Number(data?.meta?.total_pages) || 1
+          if (page >= totalPages) break
+          page += 1
         }
+
+        setInventories(allProducts)
+        if (meta) setInventoriesMeta(meta)
       } catch (err) {
         console.error('Error fetching lot inventories:', err)
       } finally {
@@ -177,7 +187,7 @@ export default function ProductDetailPage() {
     }
 
     fetchInventories()
-  }, [lotId, inventoryPage])
+  }, [lotId])
 
   useEffect(() => {
     if (remainingTime <= 0) return
@@ -758,29 +768,6 @@ export default function ProductDetailPage() {
                 </table>
               </div>
 
-              {inventoryMeta.total_pages > 1 && (
-                <div className="wl-pagination">
-                  <button
-                    type="button"
-                    disabled={inventoryPage <= 1}
-                    onClick={() => setInventoryPage((p) => Math.max(1, p - 1))}
-                    aria-label="Previous page"
-                  >
-                    ‹
-                  </button>
-                  <span className="wl-page-label">
-                    Page {inventoryPage} of {inventoryMeta.total_pages}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={inventoryPage >= inventoryMeta.total_pages}
-                    onClick={() => setInventoryPage((p) => Math.min(inventoryMeta.total_pages, p + 1))}
-                    aria-label="Next page"
-                  >
-                    ›
-                  </button>
-                </div>
-              )}
             </>
           )}
         </section>
