@@ -1308,9 +1308,8 @@ textarea.form-input {
 }
 
 .lotz-reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  opacity: 1;
+  transform: none;
 }
 
 .lotz-reveal.is-visible {
@@ -1559,15 +1558,15 @@ a.lotz-topbar__item:hover { text-decoration: underline; }
   width: 52px;
   height: 52px;
   flex-shrink: 0;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  border: 1.5px solid var(--wl-brand);
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--wl-brand);
 }
-.lotz-why h3 { color: #fff; font-size: 15px; font-weight: 700; margin: 0 0 6px; }
-.lotz-why p { color: rgba(255, 255, 255, 0.72); font-size: 13.5px; line-height: 1.65; margin: 0; }
+.lotz-why h3 { color: var(--lotz-char); font-size: 15px; font-weight: 700; margin: 0 0 6px; }
+.lotz-why p { color: var(--lotz-muted); font-size: 13.5px; line-height: 1.65; margin: 0; }
 
 .lotz-cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 44px; text-align: left; width: 100%; }
 .lotz-cat { background: #fff; border: 1px solid var(--wl-line); display: flex; flex-direction: column; }

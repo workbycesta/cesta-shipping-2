@@ -5,22 +5,27 @@ export function useReveal() {
   useEffect(() => {
     const el = ref.current
     if (!el) return
+    const revealChildren = () => {
+      el.querySelectorAll('.lotz-reveal').forEach((node) => {
+        node.classList.add('is-visible')
+      })
+    }
     if (typeof IntersectionObserver === 'undefined') {
-      el.classList.add('is-visible')
+      revealChildren()
       return
     }
     const io = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible')
-            io.unobserve(entry.target)
+            revealChildren()
+            io.disconnect()
           }
         })
       },
-      { threshold: 0.15 }
+      { threshold: 0.01, rootMargin: '0px 0px 20% 0px' }
     )
-    el.querySelectorAll('.lotz-reveal').forEach((n) => io.observe(n))
+    io.observe(el)
     return () => io.disconnect()
   }, [])
   return ref
