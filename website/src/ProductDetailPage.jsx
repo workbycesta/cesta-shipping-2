@@ -46,6 +46,7 @@ export default function ProductDetailPage() {
   const { user, openSignInModal } = useUser()
 
   const lotId = paramId || ''
+  const isCustomLot = lotId.startsWith('custom-')
 
   const [lotSummary, setLotSummary] = useState(null)
   const [topCategory, setTopCategory] = useState([])
@@ -129,6 +130,24 @@ export default function ProductDetailPage() {
       setLoading(true)
       setError('')
       try {
+        // Custom (admin-added) lots come from our own API — same card shape
+        // as the /products grid, so detail/timer/bidding work unchanged.
+        if (isCustomLot) {
+          const res = await fetch('/api/custom-lots')
+          if (!res.ok) throw new Error(`Failed to load product details (${res.status})`)
+          const data = await res.json()
+          const card = (data?.lots || []).find((l) => String(l.id) === String(lotId))
+          if (!card) throw new Error('This lot is no longer available')
+          setLotSummary(card)
+          setTopCategory(card.category_name ? [{ name: card.category_name }] : [])
+          setTopBrand(card.brand_name ? [{ name: card.brand_name }] : [])
+          if (typeof card.bid_remaining_time === 'number') {
+            setRemainingTime(Math.max(0, Math.floor(card.bid_remaining_time - timerOffset)))
+          } else {
+            setRemainingTime(0)
+          }
+          return
+        }
         const res = await fetch(`/api/lot_publishes/${lotId}/lot_details`)
         if (!res.ok) {
           throw new Error(`Failed to load product details (${res.status})`)
@@ -151,10 +170,37 @@ export default function ProductDetailPage() {
     }
 
     fetchDetails()
-  }, [lotId, timerOffset])
+  }, [lotId, timerOffset, isCustomLot])
 
   useEffect(() => {
     if (!lotId) return
+
+    // Custom lots: manifest comes from the admin-entered items on the card.
+    if (isCustomLot) {
+      const fetchCustomInventories = async () => {
+        setInventoryLoading(true)
+        try {
+          const res = await fetch('/api/custom-lots')
+          if (!res.ok) return
+          const data = await res.json()
+          const card = (data?.lots || []).find((l) => String(l.id) === String(lotId))
+          const items = (card?.manifest_items || card?.manifestItems || []).map((it, idx) => ({
+            id: it.id || `custom-${idx}`,
+            description: it.description || it.title || 'Unnamed item',
+            quantity: Number(it.quantity) || 0,
+            mrp: Number(it.mrp) || 0
+          }))
+          setInventories(items)
+          setInventoriesMeta({ current_page: 1, total_pages: 1, total_count: items.length })
+        } catch (err) {
+          console.error('Error fetching custom lot inventories:', err)
+        } finally {
+          setInventoryLoading(false)
+        }
+      }
+      fetchCustomInventories()
+      return
+    }
 
     const fetchInventories = async () => {
       setInventoryLoading(true)
@@ -187,7 +233,7 @@ export default function ProductDetailPage() {
     }
 
     fetchInventories()
-  }, [lotId])
+  }, [lotId, isCustomLot])
 
   useEffect(() => {
     if (remainingTime <= 0) return

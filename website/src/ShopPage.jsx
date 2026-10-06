@@ -49,7 +49,10 @@ function buildVisiblePages(current, total) {
 
 function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
   const navigate = useNavigate()
-  const detailPath = orgName
+  const isCustom = product.is_custom_lot || product.custom_lot || String(product.id || '').startsWith('custom-')
+  // Custom (admin-added) lots always live on the global detail route —
+  // never under a marketplace org path.
+  const detailPath = (orgName && !isCustom)
     ? `/${orgName}/product_detail/${product.id}`
     : `/product_detail/${product.id}`
   const remaining = typeof product.bid_remaining_time === 'number'
@@ -97,6 +100,9 @@ function LotCard({ product, orgName, formatMoney, formatRawMoney }) {
 
       <div className="lot-card__body">
         <div className="lot-card__tags">
+          {(product.is_custom_lot || product.custom_lot) && (
+            <span className="wl-badge wl-badge-brand">★ Our Lot</span>
+          )}
           {product.storage_location && (
             <span className="wl-badge">{displayCity(product.storage_location)}</span>
           )}
@@ -159,6 +165,18 @@ function FilterGroup({ title, children, defaultOpen = true, count = 0 }) {
   )
 }
 
+function dedupePreserveOrder(list) {
+  const seen = new Set()
+  const out = []
+  for (const item of list) {
+    const key = String(item.id ?? item.lot_number ?? item.lot_name ?? '')
+    if (!key || seen.has(key)) continue
+    seen.add(key)
+    out.push(item)
+  }
+  return out
+}
+
 export default function ShopPage() {
   const { orgName } = useParams()
   const { formatMoney, formatRawMoney, applyPriceHike, timerOffsetSeconds } = usePrice()
@@ -190,6 +208,25 @@ export default function ShopPage() {
 
   const [page, setPage] = useState(1)
   const [meta, setMeta] = useState({ current_page: 1, total_pages: 1, total_count: 0, active_lots: 0 })
+
+  // Admin-added lots: always pinned FIRST on page 1 (unfiltered view).
+  const [customLots, setCustomLots] = useState([])
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchCustomLots = async () => {
+      try {
+        const res = await fetch('/api/custom-lots')
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled && Array.isArray(data.lots)) setCustomLots(data.lots)
+      } catch {
+        // Custom lots are additive — never break the B4Trader feed over them.
+      }
+    }
+    fetchCustomLots()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     const fetchFilterOptions = async () => {
@@ -269,7 +306,30 @@ export default function ShopPage() {
             ? Math.max(0, p.bid_remaining_time - timerOffset)
             : p.bid_remaining_time
         }))
-        setProducts(results)
+        // Admin-added lots pin FIRST on page 1 of the default unfiltered view
+        // (global /products only — never inside a marketplace org page).
+        const onFirstPage = (page || 1) === 1
+        const unfiltered = !searchText
+          && selectedCategories.length === 0
+          && selectedSubCategories.length === 0
+          && selectedConditions.length === 0
+          && selectedLocations.length === 0
+          && (priceFrom ?? 0) === (filterOptions.price_range?.min_price ?? 0)
+          && (priceTo ?? 12000000) === (filterOptions.price_range?.max_price ?? 12000000)
+        let merged = results
+        if (onFirstPage && unfiltered && !orgName && customLots.length > 0) {
+          const pinned = customLots.map((p) => ({
+            ...p,
+            endTime: typeof p.bid_remaining_time === 'number'
+              ? now + Math.max(0, p.bid_remaining_time - timerOffset) * 1000
+              : null,
+            bid_remaining_time: typeof p.bid_remaining_time === 'number'
+              ? Math.max(0, p.bid_remaining_time - timerOffset)
+              : p.bid_remaining_time
+          }))
+          merged = dedupePreserveOrder([...pinned, ...results])
+        }
+        setProducts(merged)
         setMeta({
           current_page: data?.meta?.current_page || page,
           total_pages: data?.meta?.total_pages || 1,
@@ -295,7 +355,10 @@ export default function ShopPage() {
     priceTo,
     page,
     orgName,
-    timerOffset
+    timerOffset,
+    customLots,
+    filterOptions.price_range?.min_price,
+    filterOptions.price_range?.max_price
   ])
 
   useEffect(() => {
@@ -366,9 +429,12 @@ export default function ShopPage() {
   // The filter API returns a real per-marketplace live count in `active_lots`
   // (e.g. 269 for an org page); `meta.total_count` is a capped 10000 and must
   // never be shown. With filters applied, show the filtered result count.
+  // Admin-added (custom) lots are pinned on page 1 of the default global view,
+  // so include them in the headline count there.
+  const pinnedCustomCount = (!hasActiveFilter && !orgName && (page || 1) === 1) ? customLots.length : 0
   const liveLotsCount = hasActiveFilter
     ? (meta.total_count || products.length)
-    : (meta.active_lots || products.length)
+    : ((meta.active_lots || products.length) + pinnedCustomCount)
 
   const filtersPanel = (
     <div className="shop-filters">

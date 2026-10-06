@@ -33,6 +33,10 @@ export default defineConfig({
         target: 'http://localhost:2000',
         changeOrigin: true,
       },
+      '/api/custom-lots': {
+        target: 'http://localhost:2000',
+        changeOrigin: true,
+      },
       '/api/marketplaces': {
         target: 'http://localhost:2000',
         changeOrigin: true,

@@ -268,6 +268,7 @@ if (MONGODB_URI) {
       AdminActivityModel = mongoose.model('AdminActivity', adminActivitySchema)
       AllotmentModel = mongoose.model('Allotment', allotmentSchema)
       ManualEndModel = mongoose.model('ManualEnd', manualEndSchema)
+      CustomLotModel = mongoose.model('CustomLot', customLotSchema)
       ensureSuperAdmin()
     })
     .catch((err) => {
@@ -604,6 +605,172 @@ async function clearManualEnd(lotId) {
     } catch (e) {
       console.error('ManualEnd DB delete error:', e.message)
     }
+  }
+}
+
+// Custom lots: admin-added products, shown BEFORE B4Trader lots on /products.
+const customLotSchema = new mongoose.Schema({
+  lotId: { type: String, required: true, unique: true, trim: true },
+  lotName: { type: String, required: true, trim: true },
+  lotNumber: { type: String, default: '', trim: true },
+  description: { type: String, default: '', trim: true },
+  floorPrice: { type: Number, default: 0 },
+  mrp: { type: Number, default: 0 },
+  quantity: { type: Number, default: 0 },
+  gradeName: { type: String, default: 'Used', trim: true },
+  categoryName: { type: String, default: '', trim: true },
+  brandName: { type: String, default: '', trim: true },
+  cityName: { type: String, default: '', trim: true },
+  marketplaceName: { type: String, default: 'Lotmart Direct', trim: true },
+  organisationImageUrl: { type: String, default: '', trim: true },
+  imageUrls: { type: [String], default: [] },
+  manifestItems: { type: [{ description: String, quantity: Number, mrp: Number }], default: [] },
+  startDate: { type: Date, default: null },
+  endDate: { type: Date, default: null },
+  status: { type: String, enum: ['active', 'inactive'], default: 'active' },
+  createdBy: { type: String, default: '', trim: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+})
+
+customLotSchema.index({ status: 1, createdAt: -1 })
+
+let CustomLotModel = null
+const memoryCustomLots = []
+
+function customLotDocToPublic(doc) {
+  if (!doc) return null
+  const o = typeof doc.toObject === 'function' ? doc.toObject() : { ...doc }
+  return {
+    lotId: o.lotId,
+    lotName: o.lotName,
+    lotNumber: o.lotNumber || '',
+    description: o.description || '',
+    floorPrice: Number(o.floorPrice) || 0,
+    mrp: Number(o.mrp) || 0,
+    quantity: Number(o.quantity) || 0,
+    gradeName: o.gradeName || 'Used',
+    categoryName: o.categoryName || '',
+    brandName: o.brandName || '',
+    cityName: o.cityName || '',
+    marketplaceName: o.marketplaceName || 'Lotmart Direct',
+    organisationImageUrl: o.organisationImageUrl || '',
+    imageUrls: Array.isArray(o.imageUrls) ? o.imageUrls.filter(Boolean) : [],
+    manifestItems: Array.isArray(o.manifestItems) ? o.manifestItems : [],
+    startDate: o.startDate || null,
+    endDate: o.endDate || null,
+    status: o.status || 'active',
+    createdBy: o.createdBy || '',
+    createdAt: o.createdAt || null,
+    updatedAt: o.updatedAt || null
+  }
+}
+
+async function listCustomLots(includeInactive = false) {
+  if (isMongoConnected && CustomLotModel) {
+    const filter = includeInactive ? {} : { status: 'active' }
+    const docs = await CustomLotModel.find(filter).sort({ createdAt: -1 }).lean()
+    return docs.map(customLotDocToPublic)
+  }
+  const all = [...memoryCustomLots].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+  const filtered = includeInactive ? all : all.filter((l) => l.status === 'active')
+  return filtered.map(customLotDocToPublic)
+}
+
+async function findCustomLot(lotId) {
+  const clean = String(lotId || '').trim()
+  if (!clean) return null
+  if (isMongoConnected && CustomLotModel) {
+    const doc = await CustomLotModel.findOne({ lotId: clean }).lean()
+    return customLotDocToPublic(doc)
+  }
+  return customLotDocToPublic(memoryCustomLots.find((l) => l.lotId === clean) || null)
+}
+
+function sanitizeCustomLotInput(body) {
+  const b = body || {}
+  const out = {}
+  const str = (v) => (v === undefined || v === null ? '' : String(v).trim())
+  const num = (v, fb = 0) => {
+    if (v === undefined || v === null || v === '') return fb
+    const n = Number(v)
+    return Number.isFinite(n) && n >= 0 ? n : fb
+  }
+  if (b.lotName !== undefined) out.lotName = str(b.lotName)
+  if (b.lotNumber !== undefined) out.lotNumber = str(b.lotNumber)
+  if (b.description !== undefined) out.description = str(b.description)
+  if (b.floorPrice !== undefined) out.floorPrice = num(b.floorPrice)
+  if (b.mrp !== undefined) out.mrp = num(b.mrp)
+  if (b.quantity !== undefined) out.quantity = Math.floor(num(b.quantity))
+  if (b.gradeName !== undefined) out.gradeName = str(b.gradeName) || 'Used'
+  if (b.categoryName !== undefined) out.categoryName = str(b.categoryName)
+  if (b.brandName !== undefined) out.brandName = str(b.brandName)
+  if (b.cityName !== undefined) out.cityName = str(b.cityName)
+  if (b.marketplaceName !== undefined) out.marketplaceName = str(b.marketplaceName) || 'Lotmart Direct'
+  if (b.organisationImageUrl !== undefined) out.organisationImageUrl = str(b.organisationImageUrl)
+  if (b.imageUrls !== undefined) {
+    const arr = Array.isArray(b.imageUrls) ? b.imageUrls : String(b.imageUrls || '').split('\n')
+    out.imageUrls = arr.map((u) => String(u || '').trim()).filter(Boolean).slice(0, 20)
+  }
+  if (b.manifestItems !== undefined) {
+    const arr = Array.isArray(b.manifestItems) ? b.manifestItems : []
+    out.manifestItems = arr.slice(0, 500).map((it) => ({
+      description: str(it && it.description),
+      quantity: Math.floor(num(it && it.quantity)),
+      mrp: num(it && it.mrp)
+    })).filter((it) => it.description)
+  }
+  if (b.startDate !== undefined) {
+    out.startDate = b.startDate ? new Date(b.startDate) : null
+    if (out.startDate && isNaN(out.startDate.getTime())) out.startDate = null
+  }
+  if (b.endDate !== undefined) {
+    out.endDate = b.endDate ? new Date(b.endDate) : null
+    if (out.endDate && isNaN(out.endDate.getTime())) out.endDate = null
+  }
+  if (b.status !== undefined) out.status = b.status === 'inactive' ? 'inactive' : 'active'
+  return out
+}
+
+function customLotToHybridCard(lot, timerOffsetSeconds = 0) {
+  const now = Date.now()
+  const endMs = lot.endDate ? new Date(lot.endDate).getTime() : NaN
+  let remaining = null
+  if (Number.isFinite(endMs)) remaining = Math.max(0, Math.floor((endMs - now) / 1000) - (timerOffsetSeconds || 0))
+  const ended = remaining !== null ? remaining <= 0 : false
+  const images = Array.isArray(lot.imageUrls) && lot.imageUrls.length > 0 ? lot.imageUrls : []
+  let qty = Number(lot.quantity) || 0
+  if (!qty && Array.isArray(lot.manifestItems)) {
+    qty = lot.manifestItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0)
+  }
+  return {
+    id: lot.lotId,
+    lot_name: lot.lotName,
+    lot_number: lot.lotNumber || lot.lotId,
+    floor_price: Number(lot.floorPrice) || 0,
+    mrp: Number(lot.mrp) || 0,
+    quantity: qty,
+    grade_name: lot.gradeName || 'Used',
+    category_name: lot.categoryName || '',
+    brand_name: lot.brandName || '',
+    city_name: lot.cityName || '',
+    city: lot.cityName || '',
+    marketplace_name: lot.marketplaceName || 'Lotmart Direct',
+    organization_name: lot.marketplaceName || 'Lotmart Direct',
+    organisation_image_url: lot.organisationImageUrl || '',
+    image_url: images[0] || '',
+    lot_image_urls: images,
+    lot_description: lot.description || '',
+    status: ended ? 'ended' : 'live',
+    publish_for_bidding: lot.status === 'active' && !ended,
+    start_date: lot.startDate ? new Date(lot.startDate).toISOString() : null,
+    end_date: lot.endDate ? new Date(lot.endDate).toISOString() : null,
+    publish_end_date: lot.endDate ? new Date(lot.endDate).toISOString() : null,
+    bid_remaining_time: remaining,
+    is_custom_lot: true,
+    custom_lot: true,
+    manifest_items: Array.isArray(lot.manifestItems) ? lot.manifestItems : [],
+    manifestItems: Array.isArray(lot.manifestItems) ? lot.manifestItems : []
   }
 }
 
@@ -1183,6 +1350,7 @@ async function fetchLotTimerInfo(lotId) {
 
 // Our website timer runs `timerEarlyHours` earlier than the b4 timer.
 // A manually ended lot always reads as finished: ourRemaining 0 + ended flag.
+// Custom (admin-added) lots count down from their own admin-set endDate.
 async function ourRemainingSecFor(lotId) {
   const config = await getPriceConfig()
   const timer = await fetchLotTimerInfo(lotId)
@@ -1193,6 +1361,27 @@ async function ourRemainingSecFor(lotId) {
       ourRemaining: 0,
       timerEarlyHours: config.timerEarlyHours,
       manuallyEnded: true
+    }
+  }
+  // Custom lots: countdown from the admin-set endDate (no b4 source).
+  if (String(lotId || '').startsWith('custom-')) {
+    const lot = await findCustomLot(lotId)
+    const endMs = lot && lot.endDate ? new Date(lot.endDate).getTime() : NaN
+    const earlySec = Number(config.timerEarlyHours || 0) * 3600
+    if (!Number.isFinite(endMs)) {
+      return {
+        timer: { lotId, reachable: true, ended: false, originalRemainingSec: null, endDate: '', status: lot ? lot.status : '' },
+        ourRemaining: null,
+        timerEarlyHours: config.timerEarlyHours,
+        manuallyEnded: false
+      }
+    }
+    const original = Math.max(0, Math.floor((endMs - Date.now()) / 1000))
+    return {
+      timer: { lotId, reachable: true, ended: original <= 0, originalRemainingSec: original, endDate: lot.endDate, status: lot.status },
+      ourRemaining: Math.max(0, original - earlySec),
+      timerEarlyHours: config.timerEarlyHours,
+      manuallyEnded: false
     }
   }
   if (timer.originalRemainingSec === null) return { timer, ourRemaining: null, timerEarlyHours: config.timerEarlyHours, manuallyEnded: false }
@@ -1209,7 +1398,42 @@ app.get('/api/admin/lot-timers', adminAuth, async (req, res) => {
     const earlySec = Number(config.timerEarlyHours || 0) * 3600
     const timers = {}
     const manualEnds = await getManualEndsForLots(ids)
+    // Custom lots resolve locally (no b4 fetch): countdown from admin endDate.
+    const customMap = {}
+    try {
+      const customs = await Promise.all(ids.filter((id) => String(id).startsWith('custom-')).map((id) => findCustomLot(id)))
+      customs.forEach((lot) => { if (lot) customMap[lot.lotId] = lot })
+    } catch (e) {
+      console.error('Custom lot timer lookup error:', e.message)
+    }
     await Promise.all(ids.map(async (id) => {
+      if (customMap[id]) {
+        const lot = customMap[id]
+        const endMs = lot.endDate ? new Date(lot.endDate).getTime() : NaN
+        const orig = Number.isFinite(endMs) ? Math.max(0, Math.floor((endMs - Date.now()) / 1000)) : null
+        const manual = manualEnds[id] || null
+        if (manual) {
+          timers[id] = {
+            lotId: id, reachable: true, ended: true,
+            originalRemainingSec: 0,
+            ourRemainingSec: 0,
+            manuallyEnded: true,
+            manualEnd: manual,
+            endDate: lot.endDate || '',
+            status: lot.status
+          }
+          return
+        }
+        timers[id] = {
+          lotId: id, reachable: true, ended: orig !== null && orig <= 0,
+          originalRemainingSec: orig,
+          ourRemainingSec: orig === null ? null : Math.max(0, orig - earlySec),
+          manuallyEnded: false,
+          endDate: lot.endDate || '',
+          status: lot.status
+        }
+        return
+      }
       const t = await fetchLotTimerInfo(id)
       const orig = t.originalRemainingSec
       const manual = manualEnds[id] || null
@@ -1241,6 +1465,112 @@ function buildSourceUrl(lotName, lotId) {
     .slice(0, 120) || 'lot'
   return `https://www.b4traders.com/product_detail/${slug}/${lotId}`
 }
+
+// Custom lots: public merged feed (admin lots FIRST) + admin CRUD.
+app.get('/api/custom-lots', async (req, res) => {
+  try {
+    const lots = await listCustomLots(false)
+    const config = await getPriceConfig()
+    const earlySec = Number(config.timerEarlyHours || 0) * 3600
+    res.json({ success: true, lots: lots.map((l) => customLotToHybridCard(l, earlySec)) })
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch custom lots', error: err.message })
+  }
+})
+
+app.get('/api/admin/custom-lots', adminAuth, async (req, res) => {
+  try {
+    const lots = await listCustomLots(true)
+    res.json({ success: true, lots })
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch custom lots', error: err.message })
+  }
+})
+
+app.post('/api/admin/custom-lots', adminAuth, async (req, res) => {
+  try {
+    const clean = sanitizeCustomLotInput(req.body || {})
+    if (!clean.lotName) return res.status(400).json({ message: 'Lot name is required' })
+    const lotId = `custom-${crypto.randomUUID().slice(0, 8)}`
+    const entry = {
+      lotId,
+      lotNumber: clean.lotNumber || lotId,
+      description: '',
+      floorPrice: 0,
+      mrp: 0,
+      quantity: 0,
+      gradeName: 'Used',
+      categoryName: '',
+      brandName: '',
+      cityName: '',
+      marketplaceName: 'Lotmart Direct',
+      organisationImageUrl: '',
+      imageUrls: [],
+      manifestItems: [],
+      startDate: null,
+      endDate: null,
+      status: 'active',
+      ...clean,
+      createdBy: req.adminUsername || '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }
+    if (isMongoConnected && CustomLotModel) {
+      await CustomLotModel.create(entry)
+    } else {
+      memoryCustomLots.push({ ...entry })
+    }
+    await logAdminActivity(req.adminUsername, 'create_custom_lot', `${entry.lotName} (${lotId})`, 'lots')
+    res.status(201).json({ success: true, lot: customLotDocToPublic(entry) })
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create lot', error: err.message })
+  }
+})
+
+app.put('/api/admin/custom-lots/:lotId', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId || '').trim()
+    const clean = sanitizeCustomLotInput(req.body || {})
+    if (clean.lotName !== undefined && !clean.lotName) {
+      return res.status(400).json({ message: 'Lot name cannot be empty' })
+    }
+    delete clean.lotId
+    const updates = { ...clean, updatedAt: new Date() }
+    if (isMongoConnected && CustomLotModel) {
+      const doc = await CustomLotModel.findOneAndUpdate({ lotId }, { $set: updates }, { new: true }).lean()
+      if (!doc) return res.status(404).json({ message: 'Lot not found' })
+      await logAdminActivity(req.adminUsername, 'update_custom_lot', `${doc.lotName} (${lotId})`, 'lots')
+      return res.json({ success: true, lot: customLotDocToPublic(doc) })
+    }
+    const idx = memoryCustomLots.findIndex((l) => l.lotId === lotId)
+    if (idx === -1) return res.status(404).json({ message: 'Lot not found' })
+    memoryCustomLots[idx] = { ...memoryCustomLots[idx], ...updates }
+    await logAdminActivity(req.adminUsername, 'update_custom_lot', `${memoryCustomLots[idx].lotName} (${lotId})`, 'lots')
+    res.json({ success: true, lot: customLotDocToPublic(memoryCustomLots[idx]) })
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update lot', error: err.message })
+  }
+})
+
+app.delete('/api/admin/custom-lots/:lotId', adminAuth, async (req, res) => {
+  try {
+    const lotId = String(req.params.lotId || '').trim()
+    if (isMongoConnected && CustomLotModel) {
+      const doc = await CustomLotModel.findOneAndDelete({ lotId }).lean()
+      if (!doc) return res.status(404).json({ message: 'Lot not found' })
+      await logAdminActivity(req.adminUsername, 'delete_custom_lot', `${doc.lotName} (${lotId})`, 'lots')
+      return res.json({ success: true })
+    }
+    const idx = memoryCustomLots.findIndex((l) => l.lotId === lotId)
+    if (idx === -1) return res.status(404).json({ message: 'Lot not found' })
+    const removed = memoryCustomLots.splice(idx, 1)[0]
+    await logAdminActivity(req.adminUsername, 'delete_custom_lot', `${removed.lotName} (${lotId})`, 'lots')
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete lot', error: err.message })
+  }
+})
+
 
 // Submit a Bid
 app.post('/api/bids', async (req, res) => {
@@ -1275,11 +1605,17 @@ app.post('/api/bids', async (req, res) => {
     // Enforce one ₹1,000 increment above the HIKED floor price server-side so it is
     // identical on every device: a bid exactly at the floor price is not enough.
     // Hiked floor is rounded up to the next ₹1,000 first, then +1000 (matches frontend).
-    // Raw floor price comes from b4traders (client value only as fallback), then the
-    // admin-configured default/range hike is applied before comparing with the bid.
-    const sourceInfo = await fetchLotSourceInfo(lotId)
-    const sourceFloor = Number(sourceInfo?.summary?.floor_price)
-    const rawFloor = Number.isFinite(sourceFloor) && sourceFloor > 0 ? sourceFloor : Number(floorPrice || 0)
+    // Raw floor price comes from b4traders (custom lot's own floor for admin lots,
+    // client value only as fallback), then the admin default/range hike applies.
+    let rawFloor = Number(floorPrice || 0)
+    if (String(lotId || '').startsWith('custom-')) {
+      const customLot = await findCustomLot(lotId)
+      if (customLot && Number(customLot.floorPrice) > 0) rawFloor = Number(customLot.floorPrice)
+    } else {
+      const sourceInfo = await fetchLotSourceInfo(lotId)
+      const sourceFloor = Number(sourceInfo?.summary?.floor_price)
+      if (Number.isFinite(sourceFloor) && sourceFloor > 0) rawFloor = sourceFloor
+    }
     const config = await getPriceConfig()
     const hikedFloor = applyPriceHikeToNumber(rawFloor, config.priceHike, config.rangeHikes)
     const minBid = hikedFloor > 0 ? Math.ceil(hikedFloor / 1000) * 1000 + 1000 : 0
@@ -1690,6 +2026,36 @@ app.get('/api/admin/sourcing/:lotId', adminAuth, async (req, res) => {
     const ourTopBid = lotBids.reduce((max, b) => (b.bidAmount > max ? b.bidAmount : max), 0)
     const ourLotName = lotBids.length > 0 ? lotBids[0].lotName : ''
 
+    // Custom lots have no b4 source: report local floor + bids as sourcing intel.
+    if (String(lotId || '').startsWith('custom-')) {
+      const lot = await findCustomLot(lotId)
+      if (!lot) return res.json({ success: false, lotId, reason: 'NOT_FOUND' })
+      const rawFloor = Number(lot.floorPrice) || 0
+      const config = await getPriceConfig()
+      const appliedHikePercent = hikePercentFor(rawFloor, config.priceHike, config.rangeHikes)
+      const hikedFloor = applyPriceHikeToNumber(rawFloor, config.priceHike, config.rangeHikes)
+      return res.json({
+        success: true,
+        lotId,
+        sourceUrl: '',
+        lotName: lot.lotName,
+        lotNumber: lot.lotNumber || lotId,
+        status: lot.status,
+        endDate: lot.endDate || '',
+        rawFloorPrice: rawFloor,
+        sourceMrp: Number(lot.mrp) || 0,
+        sourceLiveBid: null,
+        buyNowPrice: null,
+        ourTopBid,
+        hikedFloor,
+        appliedHikePercent,
+        suggestedSourceBid: 0,
+        expectedProfit: 0,
+        isCustomLot: true,
+        fetchedAt: new Date().toISOString()
+      })
+    }
+
     const info = await fetchLotSourceInfo(lotId)
     if (!info) {
       return res.json({ success: false, lotId, sourceUrl: buildSourceUrl(ourLotName, lotId), reason: 'SOURCE_UNREACHABLE' })
@@ -1741,6 +2107,35 @@ app.get('/api/admin/sourcing/:lotId', adminAuth, async (req, res) => {
 // Build the manifest Excel buffer for a lot with Lotmart price hike applied.
 // Used by both the download endpoint and the email endpoint.
 async function buildManifestExcel(lotId) {
+  // Custom lots: build the manifest from admin-entered items (no b4 source).
+  if (String(lotId || '').startsWith('custom-')) {
+    const lot = await findCustomLot(lotId)
+    if (!lot) {
+      const err = new Error('Custom lot not found')
+      err.statusCode = 404
+      throw err
+    }
+    const { priceHike, rangeHikes } = await getPriceConfig()
+    const headers = ['Product name', 'Quantity', 'MRP', 'Floor Price']
+    const rows = [headers]
+    for (const it of lot.manifestItems || []) {
+      const qty = Number(it.quantity) || 0
+      const mrp = Number(it.mrp) || 0
+      const rawFloor = mrp > 0 && Number(lot.mrp) > 0 && Number(lot.floorPrice) > 0
+        ? Math.round((mrp / Number(lot.mrp)) * Number(lot.floorPrice))
+        : 0
+      const hiked = rawFloor > 0
+        ? Math.round(rawFloor * (1 + hikePercentFor(rawFloor, priceHike, rangeHikes) / 100))
+        : 0
+      rows.push([it.description || '', qty, mrp, hiked])
+    }
+    const sheet = XLSX.utils.aoa_to_sheet(rows)
+    sheet['!cols'] = [{ wch: 50 }, { wch: 12 }, { wch: 16 }, { wch: 16 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, sheet, 'Manifest')
+    const excelBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    return { excelBuffer, filename: `manifest_${lot.lotNumber || lotId}.xlsx`, lotName: lot.lotName }
+  }
   // 1. Fetch lot details from b4traders
   const lotDetailsRes = await fetch(`https://www.b4traders.com/api/lot_publishes/${lotId}/lot_details`, {
     headers: { 'Accept': 'application/json, text/plain, */*' }

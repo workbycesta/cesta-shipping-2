@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { AdminProvider, useAdmin } from './AdminContext'
+import AdminLotsManager from './AdminLotsManager'
 import LandingPage from './LandingPage'
 import MarketplacesPage from './MarketplacesPage'
 import ProductDetailPage from './ProductDetailPage'
@@ -746,6 +747,8 @@ function AdminPanel() {
       </div>
       <RangePriceSection />
       <TimerConfigSection />
+
+      <AdminLotsManager />
 
       <AdminTradersSection />
 

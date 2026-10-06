@@ -34,6 +34,14 @@
       "destination": "https://cesta-shipping-2-production.up.railway.app/api/price-config"
     },
     {
+      "source": "/api/custom-lots/:path*",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/custom-lots/:path*"
+    },
+    {
+      "source": "/api/custom-lots",
+      "destination": "https://cesta-shipping-2-production.up.railway.app/api/custom-lots"
+    },
+    {
       "source": "/api/marketplaces/:path*",
       "destination": "https://cesta-shipping-2-production.up.railway.app/api/marketplaces/:path*"
     },
