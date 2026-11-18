@@ -346,6 +346,76 @@
   margin: 0;
 }
 
+/* ---------- Buy now ---------- */
+.pdp-buy-btn {
+  margin-top: 4px;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.pdp-buy-save {
+  color: var(--wl-success);
+  margin-left: 8px;
+}
+
+.pdp-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.pdp-dialog {
+  background: var(--wl-bg);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 28px;
+  position: relative;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+  text-align: center;
+}
+
+.pdp-dialog__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--wl-bg-alt);
+  border: 1px solid var(--wl-line);
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  color: var(--wl-body);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pdp-dialog__close:hover {
+  color: var(--wl-ink);
+  border-color: var(--wl-muted);
+}
+
+.pdp-dialog h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--wl-ink);
+  margin: 0 0 8px;
+}
+
+.pdp-dialog p {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--wl-body);
+  margin: 0 0 20px;
+}
+
 .pdp-secondary-actions {
   display: flex;
   gap: 8px;

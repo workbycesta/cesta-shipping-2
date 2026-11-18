@@ -106,6 +106,7 @@ export default function ProductDetailPage() {
 
   const [copied, setCopied] = useState(false)
   const [downloadingManifest, setDownloadingManifest] = useState(false)
+  const [showBuyDialog, setShowBuyDialog] = useState(false)
 
   const fetchLotBids = async () => {
     if (!lotId) return
@@ -445,6 +446,11 @@ export default function ProductDetailPage() {
     lotSummary.floor_price ? Math.ceil(applyPriceHike(Number(lotSummary.floor_price)) / 1000) * 1000 + 1000 : 0,
     bidStatusInfo.topBidAmount || 0
   )
+  const buyNowRaw = Number(lotSummary?.buy_now_price) || 0
+  const buyNowPrice = buyNowRaw > 0 ? applyPriceHike(buyNowRaw) : 0
+  const buyNowSavePct = buyNowPrice > 0 && Number(lotSummary?.mrp) > 0
+    ? (1 - buyNowPrice / Number(lotSummary.mrp)) * 100
+    : 0
 
   return (
     <div className="wl-page">
@@ -610,6 +616,31 @@ export default function ProductDetailPage() {
                 {biddingError && <div className="wl-notice wl-notice-error" style={{ marginBottom: 0 }}>{biddingError}</div>}
                 {bidSubmitted && <div className="wl-notice wl-notice-success" style={{ marginBottom: 0 }}>Your bid was placed successfully.</div>}
               </form>
+
+              {buyNowPrice > 0 && !isBiddingClosed && (
+                <button type="button" className="wl-btn wl-btn-secondary wl-btn-block pdp-buy-btn" onClick={() => setShowBuyDialog(true)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                    <path d="M3 6h18" />
+                    <path d="M16 10a4 4 0 0 1-8 0" />
+                  </svg>
+                  Buy @ {formatRawMoney(buyNowPrice)}
+                  {buyNowSavePct > 0 && <span className="pdp-buy-save">(Save {buyNowSavePct.toFixed(2)}%)</span>}
+                </button>
+              )}
+
+              {showBuyDialog && (
+                <div className="pdp-dialog-overlay" onClick={() => setShowBuyDialog(false)}>
+                  <div className="pdp-dialog" role="dialog" aria-modal="true" aria-label="Buy this lot" onClick={(e) => e.stopPropagation()}>
+                    <button className="pdp-dialog__close" type="button" onClick={() => setShowBuyDialog(false)} aria-label="Close">×</button>
+                    <h3>Buy this lot</h3>
+                    <p>Please contact our sales team for initiating the process.</p>
+                    <button type="button" className="wl-btn wl-btn-primary wl-btn-block" onClick={() => setShowBuyDialog(false)}>
+                      Got It
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <div className="pdp-secondary-actions">
                 <button type="button" className="wl-btn wl-btn-secondary wl-btn-sm pdp-action-btn" onClick={handleShare}>
