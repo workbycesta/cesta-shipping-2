@@ -35,7 +35,9 @@ function mergeInventoriesByName(items) {
     group.quantity += qty
     if (!group.mrp && item?.mrp) group.mrp = Number(item.mrp) || 0
   }
-  return [...groups.values()]
+  return [...groups.values()].sort(
+    (a, b) => b.quantity * b.mrp - a.quantity * a.mrp
+  )
 }
 
 export default function ProductDetailPage() {
